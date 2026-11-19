@@ -257,6 +257,30 @@ export function codexLoginCommand(cfg: RelayConfig): string {
   return `CODEX_HOME=${JSON.stringify(relayCodexHome(cfg))} ${JSON.stringify(bin)} login`;
 }
 
+/** Where relay's Codex home cannot open a browser (a remote or headless Mac), Codex signs in with a device code instead. */
+export const DEVICE_AUTH_NOTE = "on a remote or headless Mac, add --device-auth, which needs device code sign-in switched on in ChatGPT's Security settings";
+
+/** How to sign relay's Codex home in (`again`: a login is stored there that Codex no longer accepts). */
+export function codexSignIn(cfg: RelayConfig, again = false): string {
+  return `${again ? "Sign in again" : "Sign in once"} with ${codexLoginCommand(cfg)} (${DEVICE_AUTH_NOTE})`;
+}
+
+/**
+ * Whether relay's Codex home holds a stored login: auth.json is there, as a regular file. Metadata
+ * only, like codexHomeStatus: the file is never opened.
+ */
+export function codexLoginStored(home: string): boolean {
+  try { return fs.lstatSync(path.join(home, "auth.json")).isFile(); } catch { return false; }
+}
+
+/**
+ * Codex reports no account (account/read) though relay's Codex home holds a login: the stored login
+ * is one Codex no longer accepts. Seen on 2026-11-18 with an access token that had expired and a
+ * refresh token that had been revoked: Codex tries the refresh when its app server starts, and when
+ * that fails it reports no account. (An expired token whose refresh still works recovers by itself.)
+ */
+export const STORED_LOGIN_REJECTED = "Codex no longer accepts it, most likely because it expired and Codex could not refresh it (its refresh token revoked, for one)";
+
 /**
  * Metadata only: never open or parse the credential file. Symlinks are not private credentials.
  * `problem`: why relay will not use this home (codexHomeProblem); doctor reports it and changes nothing.

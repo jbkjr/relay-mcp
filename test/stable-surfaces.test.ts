@@ -130,7 +130,7 @@ test("stable surfaces: CLI usage, version aliases and misuse status", () => {
   for (const alias of ["--version", "-v", "version"]) {
     const r = spawnSync(process.execPath, [CLI, alias], { encoding: "utf8" });
     assert.equal(r.status, 0);
-    assert.equal(r.stdout, "relay 1.2.1\n");
+    assert.equal(r.stdout, "relay 1.2.2\n");
   }
   const bad = spawnSync(process.execPath, [CLI, "unknown-command"], { encoding: "utf8" });
   assert.equal(bad.status, 2);

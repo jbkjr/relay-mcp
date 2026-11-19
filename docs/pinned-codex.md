@@ -87,6 +87,18 @@ not exist, and relay's file keeps the login in the file store its turns read):
 CODEX_HOME="$HOME/.local/share/relay-codex-home" ~/.local/share/relay-codex-pins/current/bin/codex login
 ```
 
+On a remote or headless Mac, add `--device-auth`, which needs device code sign-in switched on in
+ChatGPT's Security settings.
+
+`relay doctor`'s "codex login" line goes by the account Codex's app server reports for that home
+(`account/read`), the check each turn makes before it starts, and not only by `codex login status`,
+which finds a stored login whether or not Codex still accepts it. When a login is stored there but
+Codex reports no account, the line fails and each Codex turn is refused, both saying that Codex no
+longer accepts the stored login, most likely because it expired and Codex could not refresh it (on
+2026-11-18, a revoked refresh token), and giving the command above to sign in again. An expired
+login whose refresh still works needs nothing: Codex refreshes it when its app server starts.
+Under `child_auth: "any"` a turn does not check the login, and neither does the line.
+
 ## A release's shipped pin
 
 A release installed from npm carries `codex-pin.json`,
@@ -97,7 +109,7 @@ the maintainer's qualification of one Codex release with exactly that relay buil
 {
   "format": "relay-shipped-codex-pin-v1",
   "codex": { "version": "0.169.0", "npmIntegrity": "sha512-…" },
-  "relay": { "scheme": "relay-build-v2", "version": "1.2.1", "sha256": "…" }
+  "relay": { "scheme": "relay-build-v2", "version": "1.2.2", "sha256": "…" }
 }
 ```
 
@@ -302,7 +314,7 @@ Failure text goes to `runs/.../runner.log`, `failure.json`, `last-failure.json`,
    CODEX_HOME="$HOME/.local/share/relay-codex-home" ~/.local/share/relay-codex-pins/current/bin/codex login
    ```
 
-   If `targets.codex.home` is set to another path, use that. The scheduled qualification never uses this login: it runs Codex with scratch homes and its own fake model.
+   If `targets.codex.home` is set to another path, use that. On a remote or headless Mac, add `--device-auth`, which needs device code sign-in switched on in ChatGPT's Security settings. The scheduled qualification never uses this login: it runs Codex with scratch homes and its own fake model.
 
 5. **Install the agent, check notifications, and load it.** The installer prints the plist it would write; `--install` writes it, with the validated config and log directories and restrictive permissions, but does not load it:
 

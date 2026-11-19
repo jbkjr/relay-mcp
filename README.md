@@ -73,7 +73,9 @@ review of the run as it goes. From a Codex session the same tools reach Claude, 
   failure (a warning with that opt-in). Relay runs Claude under the login Claude Code has stored,
   and Codex under the login in relay's own Codex home (see [Codex](#codex)). `relay doctor` prints
   the method each CLI reports (`claude auth status`, `codex login status`); for Codex that can be a
-  ChatGPT account or a stored API key.
+  ChatGPT account or a stored API key. For Codex it also asks Codex's app server which account it
+  is signed in with, the check each turn makes, since `codex login status` only finds a stored
+  login, and Codex may no longer accept it (one that expired and could not be refreshed).
 - Launched agents use your Claude and ChatGPT plans like any other use of those CLIs. See
   [Accounts and cost](#accounts-and-cost).
 
@@ -92,6 +94,10 @@ Then sign Codex in once for relay, which runs Codex with a Codex home of its own
 ```sh
 CODEX_HOME="$HOME/.local/share/relay-codex-home" ~/.local/share/relay-codex-pins/current/bin/codex login
 ```
+
+On a remote or headless Mac, add `--device-auth`, which needs device code sign-in switched on in
+ChatGPT's Security settings. The same command signs in again when relay says Codex no longer
+accepts the stored login.
 
 Restart your Claude Code and Codex sessions: each session starts its own relay server when it
 starts.
@@ -185,7 +191,8 @@ Relay runs the pinned Codex with a Codex home of its own, `~/.local/share/relay-
 `~/.codex`, which is why it needs the one-time `codex login` above (`relay install codex --write`
 makes that home, with the `config.toml` relay rewrites on every turn). `relay doctor` shows under
 "codex pin" which pin is in force (shipped or local) and for which Codex, under "codex home" and
-"codex login" whether that home is signed in, and under "codex launch" whether a Codex job started
+"codex login" whether that home is signed in (by the account Codex's app server reports, as each
+turn checks, not only by `codex login status`), and under "codex launch" whether a Codex job started
 in the current directory passes the check each turn makes of Codex's effective configuration
 (system, managed and project layers included). Your own `~/.codex` is for your own Codex sessions:
 relay's jobs read none of it ("your codex").

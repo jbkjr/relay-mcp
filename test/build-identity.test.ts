@@ -23,6 +23,23 @@ function scratch(t: any) {
 
 const inBuild = (rel: string) => QUALIFIED_BUILD.some((entry) => entry.endsWith("/") ? rel.startsWith(entry) || `${rel}/` === entry : rel === entry);
 
+// The sources dist/ is built from, beside the build identity's own files: the public repository is
+// exported from this one with both byte for byte, so that its build is the build qualified.
+const BUILD_SOURCES = ["src/", "native/", "tsconfig.json", "scripts/stamp-build.mjs", "scripts/build-sbcheck.mjs", "scripts/check-pack.mjs", "bin/"];
+
+test("build identity: its files and build sources cite no issue by number (repo#N), which a reader of the public repository could not follow", () => {
+  const tracked = spawnSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8" });
+  if (tracked.status !== 0) return; // not a git checkout (an npm install): nothing to check here
+  const covered = (rel: string) => inBuild(rel) || BUILD_SOURCES.some((r) => r.endsWith("/") ? rel.startsWith(r) : rel === r);
+  const hits: string[] = [];
+  for (const rel of tracked.stdout.split("\0").filter((f) => f && covered(f))) {
+    let text: string;
+    try { text = fs.readFileSync(path.join(ROOT, rel), "utf8"); } catch { continue; }
+    text.split("\n").forEach((line, i) => { if (/\brelay#\d+/.test(line)) hits.push(`${rel}:${i + 1}: ${line.trim()}`); });
+  }
+  assert.deepEqual(hits, [], "describe the case instead of citing the issue: the export cannot rewrite these files");
+});
+
 test("build identity: the stage-2 test files are exactly the ones the qualification's cases run", () => {
   const named = new Set<string>();
   for (const c of Object.values(ESCALATION_CASES) as any[]) for (const part of Object.values(c.parts) as any[]) for (const f of part.files) named.add(`test/${f}.test.ts`);

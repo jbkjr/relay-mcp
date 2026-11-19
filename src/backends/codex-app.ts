@@ -12,6 +12,7 @@ import { diagnosticTail } from "../core/redact.js";
 import { speedRank, type Speed } from "../targets/index.js";
 import { skipDaybreak } from "./codex-daybreak.js";
 import { codexShellPolicyNote } from "./codex-shell-policy.js";
+import { codexLoginStored, STORED_LOGIN_REJECTED } from "./codex-pin.js";
 import { CodexSubagents } from "./codex-subagents.js";
 import type { Stage2Session } from "./codex-env.js";
 import { stage2BrokerConfigProblem, type Stage2BrokerConfig } from "./codex-stage2.js";
@@ -315,6 +316,8 @@ export interface Expected {
   relayOnly: boolean;
   /** Whether Codex must be signed in with a ChatGPT account, not an API key. */
   accountLogin: boolean;
+  /** Relay's Codex home, and how to sign it in once or again (codex-pin.ts codexSignIn), for a refusal to say. */
+  signIn?: { home: string; once: string; again: string };
   /** The model relay asked for, when it asked for one: the thread must report that it is using it. */
   model?: string;
   /** Set under codex_endpoint_override "accept": an endpoint Codex's own config sets for OpenAI's provider is not judged. */
@@ -339,7 +342,10 @@ async function loginProblem(rpc: { request(method: string, params: unknown): Pro
     return `relay could not find out how Codex is signed in (${(err as Error).message}), and it is set not to run on API keys ("child_auth": "any" skips this check)`;
   }
   if (type === "chatgpt") return null;
-  return `Codex is ${type ? `signed in with ${type === "apiKey" ? "an API key" : String(type)}` : "not signed in"}, not with a ChatGPT account, and relay is set not to run on API keys ("child_auth": "any" allows it)`;
+  const how = expect.signIn;
+  // No account, though relay's Codex home holds a login: one Codex no longer accepts.
+  if (!type && how && codexLoginStored(how.home)) return `Codex is not signed in: relay's Codex home ${how.home} holds a login, but ${STORED_LOGIN_REJECTED}. ${how.again}`;
+  return `Codex is ${type ? `signed in with ${type === "apiKey" ? "an API key" : String(type)}` : "not signed in"}, not with a ChatGPT account, and relay is set not to run on API keys ("child_auth": "any" allows it)${how ? `. ${how.once}` : ""}`;
 }
 
 /** Codex's own default for chatgpt_base_url (codex-rs core config): leaving it so redirects nothing. */
@@ -1005,6 +1011,8 @@ export async function codexPreflight(o: {
   released?: readonly string[];
   /** Given a note naming released names Codex keeps from its commands, or that relay cannot tell (codex-shell-policy.ts). */
   onShellPolicyNote?: (note: string) => void;
+  /** Doctor: given how Codex reports it is signed in (account/read's account type, null for none), read first, before any check can refuse. */
+  onAccount?: (type: string | null) => void;
 }): Promise<string | null> {
   if (o.signal?.aborted) return "the turn was stopped before relay checked Codex's effective configuration";
   const rpc = connect(o.bin, o.args, o.cwd, o.env, () => {});
@@ -1015,6 +1023,11 @@ export async function codexPreflight(o: {
     try {
       await rpc.request("initialize", HELLO);
       rpc.send({ method: "initialized" });
+      if (o.onAccount) {
+        let account: unknown;
+        try { account = (await rpc.request("account/read", { refreshToken: false }))?.account; } catch { /* unknown: loginProblem says so, where a turn checks it */ }
+        if (account !== undefined) o.onAccount(account && typeof (account as { type?: unknown }).type === "string" ? (account as { type: string }).type : null);
+      }
       const read = await rpc.request("config/read", { cwd: o.cwd, includeLayers: true });
       const eff = read.config;
       const problem = configProblem(eff, o.expect) ?? (await requirementsProblem(rpc, o.expect.permissions)) ?? (await loginProblem(rpc, o.expect)) ?? fastModeProblem(eff, o.expect)

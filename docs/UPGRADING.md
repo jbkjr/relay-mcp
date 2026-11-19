@@ -106,6 +106,22 @@ What restoring loses: the registry's record of whatever ran under the newer rele
 Newest first. Relay 1.1.4 and earlier came before the first public release; their notes are kept
 because later notes and the reference docs point into them.
 
+## Relay 1.2.2
+
+A fix release. No config or registry migration is needed, and Codex pins in your store keep working.
+
+- **`relay doctor`'s "codex login" line goes by the account Codex reports**, the check each Codex
+  turn makes (`account/read`), not only by `codex login status`, which finds a stored login whether
+  or not Codex still accepts it. A login stored in relay's Codex home that Codex no longer accepts
+  (most likely one that expired and could not be refreshed) now fails the line, where before the
+  line said "Logged in" while every Codex job was refused. Under the default `child_auth`, an API-key
+  login there fails the line too, as it already failed each turn. Doctor asks the app server it
+  already starts for the "codex launch" line, so it starts nothing more.
+- **A Codex turn refused for its login says how to sign in again**: the `codex login` command for
+  relay's Codex home and pin, with `--device-auth` for a remote or headless Mac (which needs device
+  code sign-in switched on in ChatGPT's Security settings). When a login is stored but Codex no
+  longer accepts it, the refusal says so, rather than only "not signed in".
+
 ## Relay 1.2.1
 
 The first public release (1.2.0 was tagged in the pre-publication repository and never published,

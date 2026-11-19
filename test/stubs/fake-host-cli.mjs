@@ -41,10 +41,10 @@ if (process.env.FAKE_FAIL && `${name} ${line}`.includes(process.env.FAKE_FAIL)) 
 if (name === "codex" && (args[0] === "app-server" || (args.includes("mcp") && args.includes("list")))) {
   const { spawnSync } = await import("node:child_process");
   // A test's stand-in for a configuration layer above relay's flags (codex-effective.json, codex-shell-policy.json)
-  // or below them (codex-features.json, the person's own features), from files in FAKE_DIR: the turn's
+  // or below them (codex-features.json, the person's own features), and for the login (codex-account.txt), from files in FAKE_DIR: the turn's
   // environment, which this process has, carries no STUB_* name (relay's environment policy drops them).
   const overlay = (file, key) => (fs.existsSync(path.join(dir, file)) ? { [key]: fs.readFileSync(path.join(dir, file), "utf8") } : {});
-  const env = { ...process.env, STUB_DIR: process.env.STUB_DIR ?? dir, ...overlay("codex-effective.json", "STUB_CODEX_EFFECTIVE"), ...overlay("codex-shell-policy.json", "STUB_CODEX_SHELL_POLICY"), ...overlay("codex-features.json", "STUB_CODEX_FEATURES") };
+  const env = { ...process.env, STUB_DIR: process.env.STUB_DIR ?? dir, ...overlay("codex-effective.json", "STUB_CODEX_EFFECTIVE"), ...overlay("codex-shell-policy.json", "STUB_CODEX_SHELL_POLICY"), ...overlay("codex-features.json", "STUB_CODEX_FEATURES"), ...overlay("codex-account.txt", "STUB_ACCOUNT") };
   const r = spawnSync(process.execPath, [new URL("./stub-codex", import.meta.url).pathname, ...args], { stdio: "inherit", env });
   process.exit(r.status ?? 1);
 }

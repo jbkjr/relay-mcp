@@ -103,6 +103,8 @@ codex plugin add relay@relay-local
 
 After the registration, `install codex --write` puts the release's shipped Codex pin in place. Relay runs Codex only from a pinned copy, never from your own `codex`; how the pin works, when you need `relay qualify-codex`, signing in with relay's own Codex home, and keeping up with Codex releases are in the README's [Codex](../README.md#codex) section and in [Pinned Codex](pinned-codex.md).
 
+`relay doctor`'s "codex login" line judges relay's Codex home as each Codex turn does: by the account Codex's app server reports for it (`account/read`), not only by `codex login status`, which finds a stored login even when Codex no longer accepts it. Where a login is stored but Codex reports no account (most likely one that expired and could not be refreshed), the line is a requirement not met, and it and each refused turn give the command to sign in again: `CODEX_HOME=<targets.codex.home> <pin store>/current/bin/codex login`, with `--device-auth` on a remote or headless Mac, which needs device code sign-in switched on in ChatGPT's Security settings.
+
 Hand-maintained registrations need the `env_vars` line too: it forwards the Codex home used to locate review transcripts and the originator marker used for host qualification.
 
 The file is parsed before the edit and again after it, and it is written only if the result parses, `mcp_servers.relay` is exactly the block above, and every other setting is unchanged. Its line endings are kept. If it does not parse, or already defines `mcp_servers.relay` in a form relay does not edit (a quoted or spaced table name such as `[mcp_servers."relay"]`, an inline table, dotted keys), relay writes nothing and says which lines to remove by hand.

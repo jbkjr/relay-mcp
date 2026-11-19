@@ -1,6 +1,6 @@
 import { openaiRefusal } from "../core/refusal.js";
 import { assertNeverAdapter } from "./never-admission.js";
-import { freezeCodexConfig, prepareCodexHome } from "./codex-pin.js";
+import { codexSignIn, freezeCodexConfig, prepareCodexHome } from "./codex-pin.js";
 import { relayCodexProtected } from "../core/protected-config.js";
 import { neverGrantProblem, neverProfileInputs, resolveNeverPolicy } from "../core/never-policy.js";
 import fs from "node:fs";
@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { nativeTemp } from "./native-temp.js";
 import { codexVersion, daybreakCatalog, daybreakDecision, skipDaybreak } from "./codex-daybreak.js";
-import { authFor, canonical, RELAY_CLI, type Mode, type RelayConfig } from "../core/config.js";
+import { authFor, canonical, RELAY_CLI, relayCodexHome, type Mode, type RelayConfig } from "../core/config.js";
 import { spawnFound } from "../core/executables.js";
 import { codexSkillFiles } from "../core/extensions.js";
 import { targetDef } from "../targets/index.js";
@@ -239,8 +239,10 @@ export const codexBackend: Backend = {
  * - `note`: what Codex's shell_environment_policy does with the names relay releases, when the turn would say so.
  * - `released`: those names.
  * - `stage2`: the job would run under stage 2 instead, which this does not judge (doctor's "codex stage 2" line does).
+ * - `account`: how the app server says relay's Codex home is signed in (account/read's account type,
+ *   null for no account), read before any check; absent when it was not asked or did not say.
  */
-export async function codexLaunchCheck(cfg: RelayConfig, cwd: string, access: Mode): Promise<{ problem: string | null; unchecked: string | null; note: string | null; released: readonly string[]; stage2: boolean }> {
+export async function codexLaunchCheck(cfg: RelayConfig, cwd: string, access: Mode): Promise<{ problem: string | null; unchecked: string | null; note: string | null; released: readonly string[]; stage2: boolean; account?: string | null }> {
   const none = { problem: null, unchecked: null, note: null, released: [] as readonly string[], stage2: false };
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "relay-doctor-codex-"));
   try {
@@ -271,11 +273,12 @@ export async function codexLaunchCheck(cfg: RelayConfig, cwd: string, access: Mo
       return { ...none, problem: (err as Error).message };
     }
     let note: string | null = null;
+    let account: string | null | undefined;
     const problem = await codexPreflight({
       bin: t.bin, args: ["app-server", ...flags.off, ...flags.c], cwd, env: prepared.env, expect: flags.expect, model: spec.model,
-      released: flags.released, onShellPolicyNote: (n) => (note = n),
+      released: flags.released, onShellPolicyNote: (n) => (note = n), onAccount: (type) => (account = type),
     });
-    return { ...none, problem: problem?.trim() ?? null, note, released: flags.released };
+    return { ...none, problem: problem?.trim() ?? null, note, released: flags.released, ...(account !== undefined ? { account } : {}) };
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -498,6 +501,7 @@ export function codexFlags(spec: TurnSpec, servers: string[], env: NodeJS.Proces
     ...(stage2?.broker ? { broker: stage2.broker } : {}),
     ...(webOff ? { webSearch: "disabled" as const } : {}),
     accountLogin: authFor(cfg, "codex") === "login",
+    signIn: { home: relayCodexHome(cfg), once: codexSignIn(cfg), again: codexSignIn(cfg, true) },
     ...(spec.model ? { model: spec.model } : {}),
     ...(cfg.codex_endpoint_override === "accept" ? { endpointOverride: true } : {}),
     skills: { root: spec.skills ? path.join(spec.skills.dir, "skills") : null, names: spec.skills?.names ?? [] },

@@ -15,8 +15,8 @@ import { otherFamilies, otherTargets, TARGETS, targetDef } from "../targets/inde
 import { briefSkill, type AdapterContext, type HostDef } from "./types.js";
 import { hostWaitCapS } from "../mcp/host.js";
 import { CODEX_MCP_ENV_VARS, codexToolTimeoutS } from "../targets/codex.js";
-import { DEFAULT_CONFIG, relayCodexHome } from "../core/config.js";
-import { codexHomeProblem, codexLoginCommand } from "../backends/codex-pin.js";
+import { authFor, DEFAULT_CONFIG, relayCodexHome } from "../core/config.js";
+import { codexHomeProblem, codexLoginCommand, codexLoginStored, codexSignIn, DEVICE_AUTH_NOTE, STORED_LOGIN_REJECTED } from "../backends/codex-pin.js";
 
 /** A plugin skill as Codex names it: $relay-delegate. */
 const skillRef = (skill: string) => `$relay-${skill}`;
@@ -257,20 +257,35 @@ export const codexHost: HostDef = {
   // The command is the CLI's own, documented under `codex login`. It reads stored credentials and
   // makes no model request. Relay prints only the method: no account, no key. Asked of relay's Codex
   // home, the login relay's Codex jobs run under (since 1.1.0), not of ~/.codex, which is the
-  // person's own Codex sessions' and is not read by relay's jobs.
-  doctorLogin(cfg, { line, warn, fail }) {
+  // person's own Codex sessions' and is not read by relay's jobs. `codex login status` only finds a
+  // stored login, which may be one Codex no longer accepts, so where the codex launch
+  // check's app server said how it is signed in (account/read, the check each turn makes), that
+  // decides the line, as it decides a turn.
+  doctorLogin(cfg, { line, warn, fail }, launch) {
     const home = relayCodexHome(cfg);
     // A home that is not relay's is reported on the codex home line; its login is not relay's either.
     if (codexHomeProblem(cfg)) return line("codex login", `not checked: relay will not use ${home} as its Codex home (see the codex home line)`);
-    const signIn = fs.existsSync(home) ? codexLoginCommand(cfg) : `relay install codex --write (which makes it), then ${codexLoginCommand(cfg)}`;
     // Codex refuses a CODEX_HOME that does not exist, with a message that names no login.
-    if (!fs.existsSync(home)) return fail("codex login", `relay's Codex home ${home} does not exist yet, so relay's Codex jobs have no login. Run ${signIn}`);
+    if (!fs.existsSync(home)) return fail("codex login", `relay's Codex home ${home} does not exist yet, so relay's Codex jobs have no login. Run relay install codex --write (which makes it), then ${codexLoginCommand(cfg)} (${DEVICE_AUTH_NOTE})`);
     const r = spawnFound(cfg.targets.codex.bin, ["login", "status"], { encoding: "utf8", env: { ...process.env, CODEX_HOME: home } });
     // Kept to the method: a key login is printed by Codex with part of the key.
     const said = first(`${r.stdout ?? ""}${r.stderr ?? ""}`).replace(/\s+-\s+.*$/, "").replace(/\bsk-\S+/g, "sk-…");
-    if (/not logged in/i.test(said)) fail("codex login", `relay's Codex home ${home} is not signed in, according to \`codex login status\` there. Sign in once with ${signIn}`);
-    else if (!r.error && r.status === 0 && said) line("codex login", `${said}, in relay's Codex home ${home} (as \`codex login status\` reports it there)`);
-    else warn("codex login", `\`codex login status\` did not say; relay cannot tell whether its Codex home ${home} is signed in (${signIn})`);
+    if (/not logged in/i.test(said)) return fail("codex login", `relay's Codex home ${home} is not signed in, according to \`codex login status\` there. ${codexSignIn(cfg)}`);
+    const stored = !r.error && r.status === 0 && said ? said : null;
+    // Judged only where a turn judges it: relay set not to run on API keys (child_auth "login").
+    const account = authFor(cfg, "codex") === "login" ? launch?.account : undefined;
+    const how = "according to the app server (account/read, the check each turn makes)";
+    if (account === null) {
+      const held = stored ? `holds a login (\`codex login status\`: ${stored})` : codexLoginStored(home) ? "holds a login" : null;
+      if (held) return fail("codex login", `relay's Codex home ${home} ${held}, but Codex reports no account for it, ${how}, so relay refuses every Codex job: ${STORED_LOGIN_REJECTED}. ${codexSignIn(cfg, true)}`);
+      return fail("codex login", `relay's Codex home ${home} is not signed in, ${how}, so relay refuses every Codex job. ${codexSignIn(cfg)}`);
+    }
+    if (account !== undefined && account !== "chatgpt") {
+      return fail("codex login", `relay's Codex home ${home} is signed in with ${account === "apiKey" ? "an API key" : account}, ${how}, not with a ChatGPT account, and relay is set not to run on API keys ("child_auth": "any" allows it). ${codexSignIn(cfg)}`);
+    }
+    const checked = account === "chatgpt" ? "; the app server reports a ChatGPT account there, as each turn checks" : "";
+    if (stored) line("codex login", `${stored}, in relay's Codex home ${home} (as \`codex login status\` reports it there)${checked}`);
+    else warn("codex login", `\`codex login status\` did not say; relay cannot tell whether its Codex home ${home} is signed in (${codexLoginCommand(cfg)})${checked}`);
   },
   doctorRegistration(cfg, present, { line, warn, registration }) {
     /** What doctor says of relay's registration, from Codex's own report or from its config.toml. */

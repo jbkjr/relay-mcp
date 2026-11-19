@@ -388,6 +388,19 @@ test("publication: relay does not run on API keys unless told to, and hands neit
     assert.equal(refused.status, "failed");
     assert.match(refused.error, /signed in with an API key, not with a ChatGPT account/);
 
+    // No account at all: relay's Codex home holds no login, and the refusal says how to sign it in.
+    const codexHome = path.join(h.env.HOME, ".local", "share", "relay-codex-home");
+    const signedOut = await h.instance({ env: { STUB_ACCOUNT: "none" } });
+    const never = await signedOut.call("delegate", { target: "codex", task: "x", mode: "read", background: false });
+    assert.equal(never.status, "failed");
+    assert.match(never.error, /Codex is not signed in, not with a ChatGPT account, and relay is set not to run on API keys \("child_auth": "any" allows it\)\. Sign in once with CODEX_HOME=".*relay-codex-home" ".*" login \(on a remote or headless Mac, add --device-auth, which needs device code sign-in switched on in ChatGPT's Security settings\)/);
+    // A login stored there that Codex no longer accepts (a private PR: a revoked refresh token): said as such, with how to sign in again.
+    fs.writeFileSync(path.join(codexHome, "auth.json"), "{}", { mode: 0o600 });
+    const dead = await signedOut.call("delegate", { target: "codex", task: "x", mode: "read", background: false });
+    assert.equal(dead.status, "failed");
+    assert.match(dead.error, /Codex is not signed in: relay's Codex home .*relay-codex-home holds a login, but Codex no longer accepts it, most likely because it expired and Codex could not refresh it \(its refresh token revoked, for one\)\. Sign in again with CODEX_HOME=".*relay-codex-home" ".*" login \(on a remote or headless Mac, add --device-auth/);
+    fs.rmSync(path.join(codexHome, "auth.json"));
+
     const anyRoot = await any.instance({ env: { ...keys, STUB_ACCOUNT: "apiKey", STUB_INIT: JSON.stringify({ apiKeySource: "ANTHROPIC_API_KEY" }) } });
     for (const target of STUB_TARGETS) assert.equal((await anyRoot.call("delegate", { target, task: "x", mode: "read", background: false })).status, "done");
     for (const s of any.starts()) assert.deepEqual([s.env.anthropicKey, s.env.openaiKey], [s.target === "claude", s.target === "codex"], `${s.target} receives only its own selected key`);

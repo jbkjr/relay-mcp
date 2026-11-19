@@ -51,8 +51,12 @@ export interface HostDef {
   registered(): "registered" | "none" | "unknown";
   /** Said after install or uninstall changed something here. */
   afterChange?: string;
-  /** Doctor: how the host's CLI is signed in. Called only when that CLI runs. */
-  doctorLogin?(cfg: RelayConfig, report: DoctorReport): void;
+  /**
+   * Doctor: how the host's CLI is signed in. Called only when that CLI runs. `account`: how the
+   * app server of doctor's codex launch check said relay's Codex home is signed in (account/read's
+   * account type, null for none), when it ran and said.
+   */
+  doctorLogin?(cfg: RelayConfig, report: DoctorReport, launch?: { account?: string | null }): void;
   /** The plugin relay ships for this host, generated into adapters/<dir> by adapters/build.mjs (adapters/generate.mjs). */
   adapter?: {
     dir: string;

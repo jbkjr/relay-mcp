@@ -156,6 +156,8 @@ async function doctorScoped(): Promise<void> {
   } catch (err) { codexPinProblem = errText(err); (cfg.targets.codex.pinned !== false && noPinYet() ? warn : fail)("codex pin", codexPinProblem); }
   const codexConfigFile = () => path.join(relayCodexHome(cfg), "config.toml");
   let claudeVersion: number[] | null = null;
+  // How the codex launch check's app server said relay's Codex home is signed in, for the codex login line.
+  const codexLaunch: { account?: string | null } = {};
   for (const t of TARGETS.filter((t) => cfg.targets[t.id].enabled)) {
     const cli = t.id;
     if (cli === "codex" && codexPinProblem) continue;
@@ -274,7 +276,11 @@ async function doctorScoped(): Promise<void> {
       try { held = fs.readFileSync(codexConfigFile(), "utf8"); } catch { /* absent: the turn writes it */ }
       if (held !== null && held !== RELAY_CODEX_CONFIG) line("codex home", `${codexConfigFile()} held changes of its own; relay replaces that file on every turn, so they never apply to a job, and the check below put relay's back first, as a turn does`);
       const checks: { access: "read" | "write"; problem: string | null; unchecked: string | null; note: string | null; released: readonly string[]; stage2: boolean }[] = [];
-      for (const access of ["read", "write"] as const) checks.push({ access, ...(await codexLaunchCheck(cfg, cwd, access)) });
+      for (const access of ["read", "write"] as const) {
+        const { account, ...check } = await codexLaunchCheck(cfg, cwd, access);
+        checks.push({ access, ...check });
+        if (account !== undefined && codexLaunch.account === undefined) codexLaunch.account = account;
+      }
       const unchecked = checks.find((c) => c.unchecked);
       const judged = checks.filter((c) => !c.stage2 && !c.unchecked);
       const refused = judged.filter((c) => c.problem);
@@ -370,7 +376,7 @@ async function doctorScoped(): Promise<void> {
   const report: DoctorReport = { line, warn, fail, registration };
 
   // Each CLI's own login command. Relay runs each CLI under whatever login it reports here.
-  for (const h of HOSTS) if (h.doctorLogin && present[h.target]) h.doctorLogin(cfg, report);
+  for (const h of HOSTS) if (h.doctorLogin && present[h.target]) h.doctorLogin(cfg, report, h.target === "codex" ? codexLaunch : undefined);
 
   const bin = path.dirname(linkPath());
   const found = locate("relay");

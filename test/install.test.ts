@@ -2105,6 +2105,43 @@ boxed("doctor: warns when Codex's effective configuration, as a turn reads it, w
   assert.doesNotMatch(said(layer({ model_provider: "ollama" })), /codex launch|your codex/);
 });
 
+boxed("doctor: the codex login line goes by the account the app server reports, as a turn does, and says how to sign in again when a stored login is dead", (b) => {
+  const cfg = path.join(b.home, ".config", "relay", "config.json");
+  const codexHome = path.join(b.home, ".local/share/relay-codex-home");
+  // codex-account.txt in the fake's directory: what the stub app server's account/read reports.
+  const account = (type: string) => fs.writeFileSync(path.join(b.tmp, "fake", "codex-account.txt"), type);
+  const login = (out: string) => /codex login\s+(.*)/.exec(out)?.[1] ?? "";
+  const signIn = (again: boolean) => `${again ? "Sign in again" : "Sign in once"} with CODEX_HOME=".*relay-codex-home" ".*" login \\(on a remote or headless Mac, add --device-auth, which needs device code sign-in switched on in ChatGPT's Security settings\\)`;
+
+  // Signed in with ChatGPT, and the app server agrees.
+  const fine = b.relay(["doctor"]).stdout;
+  assert.match(login(fine), /^Logged in using ChatGPT, in relay's Codex home .*relay-codex-home \(as `codex login status` reports it there\); the app server reports a ChatGPT account there, as each turn checks$/);
+
+  // a private PR: a ChatGPT login is stored, but Codex no longer accepts it (a revoked refresh token), so every turn is refused.
+  account("none");
+  const dead = b.relay(["doctor"]);
+  assert.equal(dead.status, 1);
+  assert.match(login(dead.stdout), new RegExp(`^FAIL: relay's Codex home .*relay-codex-home holds a login \\(\`codex login status\`: Logged in using ChatGPT\\), but Codex reports no account for it, according to the app server \\(account/read, the check each turn makes\\), so relay refuses every Codex job: Codex no longer accepts it, most likely because it expired and Codex could not refresh it \\(its refresh token revoked, for one\\)\\. ${signIn(true)}$`));
+  assert.match(dead.stdout, new RegExp(`codex launch\\s+WARNING: relay refuses Codex read and write jobs .*Codex is not signed in: relay's Codex home .*relay-codex-home holds a login, but Codex no longer accepts it.*${signIn(true)}`));
+
+  // No login stored at all, and nothing from `codex login status`: not signed in, said without a cause.
+  fs.rmSync(path.join(codexHome, "auth.json"));
+  const never = login(b.relay(["doctor"], { FAKE_CODEX_LOGIN: "" }).stdout);
+  assert.match(never, new RegExp(`^FAIL: relay's Codex home .*relay-codex-home is not signed in, according to the app server \\(account/read, the check each turn makes\\), so relay refuses every Codex job\\. ${signIn(false)}$`));
+  assert.doesNotMatch(never, /refresh/);
+  fs.writeFileSync(path.join(codexHome, "auth.json"), "{}", { mode: 0o600 });
+
+  // An API key, where relay is set not to run on one.
+  account("apiKey");
+  assert.match(login(b.relay(["doctor"]).stdout), /^FAIL: relay's Codex home .* is signed in with an API key, according to the app server .*, not with a ChatGPT account, and relay is set not to run on API keys \("child_auth": "any" allows it\)\. Sign in once with /);
+
+  // Under child_auth "any" a turn does not judge the login, and neither does the line.
+  writeConfig(cfg, { child_auth: "any" });
+  account("none");
+  const any = b.relay(["doctor"]).stdout;
+  assert.match(login(any), /^Logged in using ChatGPT, in relay's Codex home .* \(as `codex login status` reports it there\)$/);
+});
+
 boxed("doctor: the codex launch check is the default job's: relay's own MCP server, the never floor, the default speed; an unwritable Codex home is not checked, not refused", (b) => {
   const cfg = path.join(b.home, ".config", "relay", "config.json");
   const fake = path.join(b.tmp, "fake");
