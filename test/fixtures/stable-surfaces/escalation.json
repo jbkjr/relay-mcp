@@ -1,0 +1,128 @@
+{
+  "approval": {
+    "request_id": "q_example",
+    "from": "j_00000001",
+    "agent": "codex",
+    "depth": 2,
+    "session": "write",
+    "task": "test a server",
+    "wants": "End turn 1 and start one new turn with the explicit capabilities below. The command runs worktree code that the agent can edit after approval. The addition applies to all commands and descendants in the replacement turn and ends when that turn and its processes stop; outside writes persist on disk. The listener may bind 0.0.0.0 for that turn, so it is on the LAN and tailnet. This permits any otherwise allowed TCP bind port, not just OS-selected ephemeral ports. The job's reserved block of 4 TCP ports ($PORT/$PORTS) is also opened for binding; listeners there may bind 0.0.0.0 and are exposed on the LAN and tailnet. Never ports, relay control ports and protected listeners remain denied. Required decider: owning_run_root. The owning root may approve eligible effects only when the person's authorized task clearly covers them; port-0 requires tests or servers. Overlay budget: 3600s; approval expires at 0. Capabilities: [{\"kind\":\"port0\",\"id\":\"<hash>\"}]. Intended continuation (untrusted): {\"argv\":[\"node\",\"./test/server-test.js\"],\"cwd\":\"<scratch>/work\"}. Reason (untrusted): \"user confirmed; supervisor label is untrusted\".",
+    "in_directory": "<scratch>/work",
+    "kind": "escalation",
+    "effect": "End turn 1 and start one new turn with the explicit capabilities below. The command runs worktree code that the agent can edit after approval. The addition applies to all commands and descendants in the replacement turn and ends when that turn and its processes stop; outside writes persist on disk. The listener may bind 0.0.0.0 for that turn, so it is on the LAN and tailnet. This permits any otherwise allowed TCP bind port, not just OS-selected ephemeral ports. The job's reserved block of 4 TCP ports ($PORT/$PORTS) is also opened for binding; listeners there may bind 0.0.0.0 and are exposed on the LAN and tailnet. Never ports, relay control ports and protected listeners remain denied. Required decider: owning_run_root. The owning root may approve eligible effects only when the person's authorized task clearly covers them; port-0 requires tests or servers. Overlay budget: 3600s; approval expires at 0. Capabilities: [{\"kind\":\"port0\",\"id\":\"<hash>\"}]. Intended continuation (untrusted): {\"argv\":[\"node\",\"./test/server-test.js\"],\"cwd\":\"<scratch>/work\"}. Reason (untrusted): \"user confirmed; supervisor label is untrusted\".",
+    "reason": "user confirmed; supervisor label is untrusted",
+    "once_only": "one replacement turn only; never a standing grant",
+    "waiting_s": 0,
+    "required_decider": "owning_run_root",
+    "request_digest": "<hash>",
+    "escalation": {
+      "native_thread": "thread",
+      "native_turn": "turn",
+      "base_policy_hash": "base",
+      "launch_plan": "qualified-fake",
+      "overlay_budget_s": 3600,
+      "version": 1,
+      "request_id": "q_example",
+      "run_id": "run_example",
+      "node_id": "j_00000001",
+      "origin_turn": 1,
+      "mcp_session": "mcp-session",
+      "mcp_call": "call",
+      "access": "write",
+      "root": {
+        "run_id": "run_example",
+        "session_identity": "<hash>",
+        "token_version": 1
+      },
+      "required_decider": "owning_run_root",
+      "capabilities": [
+        {
+          "kind": "port0",
+          "id": "<hash>"
+        }
+      ],
+      "reason": "user confirmed; supervisor label is untrusted",
+      "continuation": {
+        "argv": [
+          "node",
+          "./test/server-test.js"
+        ],
+        "cwd": "<scratch>/work"
+      },
+      "never_hash": "<hash>",
+      "baseline_grant_hash": "<hash>",
+      "approval_deadline_ms": 0
+    },
+    "never_policy": {
+      "hash": "<hash>",
+      "version": 1,
+      "removed_builtins": []
+    }
+  },
+  "receipt": {
+    "state": "restart_pending",
+    "request_id": "q_example",
+    "request_digest": "<hash>",
+    "capabilities": [
+      {
+        "kind": "port0",
+        "id": "<hash>"
+      }
+    ],
+    "required_decider": "owning_run_root",
+    "decision_provenance": {
+      "route": "owning-run-root",
+      "root": {
+        "run_id": "run_example",
+        "session_identity": "<hash>",
+        "token_version": 1
+      },
+      "decided_by": "root session",
+      "at": 0,
+      "note": null,
+      "request_digest": "<hash>"
+    },
+    "overlay_budget_s": 3600,
+    "approval_deadline_ms": 0,
+    "effect": "End turn 1 and start one new turn with the explicit capabilities below. The command runs worktree code that the agent can edit after approval. The addition applies to all commands and descendants in the replacement turn and ends when that turn and its processes stop; outside writes persist on disk. The listener may bind 0.0.0.0 for that turn, so it is on the LAN and tailnet. This permits any otherwise allowed TCP bind port, not just OS-selected ephemeral ports. The job's reserved block of 4 TCP ports ($PORT/$PORTS) is also opened for binding; listeners there may bind 0.0.0.0 and are exposed on the LAN and tailnet. Never ports, relay control ports and protected listeners remain denied. Required decider: owning_run_root. The owning root may approve eligible effects only when the person's authorized task clearly covers them; port-0 requires tests or servers. Overlay budget: 3600s; approval expires at 0. Capabilities: [{\"kind\":\"port0\",\"id\":\"<hash>\"}]. Intended continuation (untrusted): {\"argv\":[\"node\",\"./test/server-test.js\"],\"cwd\":\"<scratch>/work\"}. Reason (untrusted): \"user confirmed; supervisor label is untrusted\"."
+  },
+  "event": {
+    "kind": "approval",
+    "item_id": "j_00000001",
+    "subject": "q_example",
+    "text": "job j_00000001 needs approval q_example. Call status j_00000001, then approve or deny it."
+  },
+  "result": {
+    "request_id": "q_example",
+    "request_digest": "<hash>",
+    "origin_turn": 1,
+    "destination_turn": 2,
+    "capabilities": [
+      {
+        "kind": "port0",
+        "id": "<hash>"
+      }
+    ],
+    "required_decider": "owning_run_root",
+    "decision_provenance": {
+      "route": "owning-run-root",
+      "root": {
+        "run_id": "run_example",
+        "session_identity": "<hash>",
+        "token_version": 1
+      },
+      "decided_by": "root session",
+      "at": 0,
+      "note": null,
+      "request_digest": "<hash>"
+    },
+    "lifetime": "one replacement turn",
+    "enforcement": "baseline plus explicit approved capability; no baseline-only confinement claim",
+    "launched": true,
+    "outcome": "cancelled",
+    "cleanup": "survivors",
+    "effective_scope": "port0 broad TCP bind/inbound; final never/control restrictions",
+    "launch": "launched",
+    "lan_disclosure": "This turn allowed listeners to bind 0.0.0.0, so they could be on the LAN."
+  }
+}

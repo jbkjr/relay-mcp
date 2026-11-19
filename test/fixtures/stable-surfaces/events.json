@@ -1,0 +1,37 @@
+[
+  {
+    "event_id": 1,
+    "kind": "settled",
+    "item": "j_00000001",
+    "about": "q_00000001",
+    "notice": "relay (event 1): job j_00000001 finished (done). Call result j_00000001."
+  },
+  {
+    "event_id": 2,
+    "kind": "approval",
+    "item": "j_00000001",
+    "about": "q_00000001",
+    "notice": "relay (event 2): job j_00000001 finished (done). Call result j_00000001."
+  },
+  {
+    "event_id": 3,
+    "kind": "decided",
+    "item": "j_00000001",
+    "about": "q_00000001",
+    "notice": "relay (event 3): job j_00000001 finished (done). Call result j_00000001."
+  },
+  {
+    "event_id": 4,
+    "kind": "late",
+    "item": "j_00000001",
+    "about": "q_00000001",
+    "notice": "relay (event 4): job j_00000001 finished (done). Call result j_00000001."
+  },
+  {
+    "event_id": 5,
+    "kind": "approval",
+    "item": "j_00000001",
+    "about": "q_00000001",
+    "notice": "relay (event 5): job j_00000001 needs approval q_00000001. Call status j_00000001, then approve or deny it."
+  }
+]

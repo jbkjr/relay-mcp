@@ -1,0 +1,46 @@
+relay — delegation, consultation, discussion and review across families of coding agent
+        (targets: claude, codex, copilot (experimental), gemini, grok (experimental); hosts: claude, codex, claude-desktop)
+
+  relay mcp [--host <target>] [--desktop] [--context <file>]
+                                      run the stdio MCP server (hosts start this, as install
+                                      registers it): --host names the family of the host's
+                                      sessions, --desktop marks the Claude desktop app's shared entry
+  relay bridge <socket>               a confined agent's MCP server: forwards stdio to its turn's socket
+  relay gemini-tools <dir> --list|<tool>
+                                      a confined Gemini agent's relay tools, through its tool discovery
+  relay tree [run_id] [--watch]       jobs, threads, discussions and reviews as one tree
+  relay chat <discussion_id>          tail a discussion; type a line to send it to both participants
+        [--say "message"] [--print]   one-shot forms: inject a message / print the transcript and exit
+  relay approvals                     approval requests waiting for a decision
+  relay adopt <id> --to <fingerprint>  explicitly authorize takeover by the connection named in status
+  relay approve <request_id> [--job] [note]   let a launched agent do what it asked: needs an
+                                      interactive terminal and a one-time code you type back, and
+                                      refuses inside relay-launched process trees it can detect (not a
+                                      security boundary; see README). --job: for the rest of that job.
+                                      Not a request marked person_only, which only you can allow in your session
+  relay deny <request_id> [reason]    refuse it (from anywhere)
+  relay cancel <id | run_id>          cancel an item and everything under it, or a whole run
+  relay clean [run_id]                remove finished runs' worktrees and merged relay/* branches
+                                      (all finished runs if no id; unmerged branches are kept),
+                                      relay's leftover temporary directories, and, if
+                                      keep_records_days is set, records of runs with no
+                                      activity for that many days
+  relay clean --forget <run_id> [--write]
+                                      forget a finished run kept because its repository is gone:
+                                      its records and relay's own files for it; prints what it
+                                      would do, and changes nothing without --write
+  relay install <claude|codex|claude-desktop> [--write] [--force] [--no-link]
+                                      register relay with a host; prints what it would do, and
+                                      changes nothing without --write
+  relay uninstall <claude|codex|claude-desktop> [--write] [--force] [--remove-link]
+                                      take relay's own entries out of a host again
+  relay doctor                        check this machine against what relay needs
+  relay qualify-codex [--version X.Y.Z] [--force]
+                                      qualify a Codex release and make it the pin relay runs
+                                      (relay refuses Codex without one), from your desktop
+                                      login; it takes about an hour and a half. Without
+                                      --version, npm's latest. A release that ships a pin needs
+                                      this only for other versions: install codex puts it in place
+  relay qualify-codex --shipped       switch to this release's shipped pin from one qualified here
+  relay --version
+

@@ -1,0 +1,209 @@
+{
+  "null-allow-false": {
+    "instructions": "relay reaches coding agents of several families: claude (Anthropic), codex (OpenAI). It cannot tell which family of model this session runs, so it does not choose for you: name target in each call that starts something, picking a family other than your own model's unless the user asks otherwise. For agents of your own family, use your host's own subagents. Every result names both sides' families (families); from here the caller's is unknown. delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach: claude (Anthropic), codex (OpenAI). Relay cannot tell your family, so name one whose family differs from your own model's, unless the user asks otherwise."
+  },
+  "null-allow-true": {
+    "instructions": "relay reaches coding agents of several families: claude (Anthropic), codex (OpenAI). It cannot tell which family of model this session runs, so it does not choose for you: name target in each call that starts something, picking a family other than your own model's unless the user asks otherwise. For agents of your own family, use your host's own subagents. Every result names both sides' families (families); from here the caller's is unknown. delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach: claude (Anthropic), codex (OpenAI). Relay cannot tell your family, so name one whose family differs from your own model's, unless the user asks otherwise."
+  },
+  "null-refuse-false": {
+    "instructions": "relay cannot tell which family of agent this session is, and its config (same_family \"refuse\") starts only agents it can show are of another family, so it reaches no agent from here. Register relay for your actual host (`relay install <host>`) and start the session again. For a multi-model harness, the user can set same_family \"allow\"; then name target. Copying a single-family registration does not identify a multi-model session.",
+    "target": "Which agent to reach. Relay cannot tell your family, and its config (same_family \"refuse\") reaches no agent from such a session."
+  },
+  "null-refuse-true": {
+    "instructions": "relay cannot tell which family of agent this session is, and its config (same_family \"refuse\") starts only agents it can show are of another family, so it reaches no agent from here. Register relay for your actual host (`relay install <host>`) and start the session again. For a multi-model harness, the user can set same_family \"allow\"; then name target. Copying a single-family registration does not identify a multi-model session.",
+    "target": "Which agent to reach. Relay cannot tell your family, and its config (same_family \"refuse\") reaches no agent from such a session."
+  },
+  "claude-allow-false": {
+    "instructions": "relay reaches other families of coding agent: from this Claude session, Codex. It fills the gaps between families. For more Claude agents, use your own subagents: they are built for this host. Name claude through relay only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Every result names both sides' families (families). delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach. Leave it out to reach Codex. claude is your own family: for Claude work use your own subagents, and name claude only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental)."
+  },
+  "claude-allow-true": {
+    "instructions": "relay reaches other families of coding agent: from this Claude session, Codex. It fills the gaps between families. For more Claude agents, use your own subagents, where this session has them: they are built for this host. Name claude through relay only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Every result names both sides' families (families). delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach. Leave it out to reach Codex. claude is your own family: for Claude work use your own subagents, where this session has them, and name claude only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental)."
+  },
+  "claude-refuse-false": {
+    "instructions": "relay reaches other families of coding agent: from this Claude session, Codex. It fills the gaps between families. For more Claude agents, use your own subagents: relay's config (same_family \"refuse\") does not start your own family. Every result names both sides' families (families). delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach. Leave it out to reach Codex. For your own family (claude) use your own subagents: relay's config (same_family \"refuse\") refuses it. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental)."
+  },
+  "claude-refuse-true": {
+    "instructions": "relay reaches other families of coding agent: from this Claude session, Codex. It fills the gaps between families. For more Claude agents, use your own subagents, where this session has them: relay's config (same_family \"refuse\") does not start your own family. Every result names both sides' families (families). delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach. Leave it out to reach Codex. For your own family (claude) use your own subagents, where this session has them: relay's config (same_family \"refuse\") refuses it. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental)."
+  },
+  "codex-allow-false": {
+    "instructions": "relay reaches other families of coding agent: from this Codex session, Claude. It fills the gaps between families. For more Codex agents, use your own subagents (spawn_agent): they are built for this host. Name codex through relay only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Every result names both sides' families (families). delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach. Leave it out to reach Claude. codex is your own family: for Codex work use your own subagents (spawn_agent), and name codex only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental)."
+  },
+  "codex-allow-true": {
+    "instructions": "relay reaches other families of coding agent: from this Codex session, Claude. It fills the gaps between families. For more Codex agents, use your own subagents, where this session has them: they are built for this host. Name codex through relay only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Every result names both sides' families (families). delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach. Leave it out to reach Claude. codex is your own family: for Codex work use your own subagents, where this session has them, and name codex only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental)."
+  },
+  "codex-refuse-false": {
+    "instructions": "relay reaches other families of coding agent: from this Codex session, Claude. It fills the gaps between families. For more Codex agents, use your own subagents (spawn_agent): relay's config (same_family \"refuse\") does not start your own family. Every result names both sides' families (families). delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach. Leave it out to reach Claude. For your own family (codex) use your own subagents (spawn_agent): relay's config (same_family \"refuse\") refuses it. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental)."
+  },
+  "codex-refuse-true": {
+    "instructions": "relay reaches other families of coding agent: from this Codex session, Claude. It fills the gaps between families. For more Codex agents, use your own subagents, where this session has them: relay's config (same_family \"refuse\") does not start your own family. Every result names both sides' families (families). delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+    "target": "Which agent to reach. Leave it out to reach Claude. For your own family (codex) use your own subagents, where this session has them: relay's config (same_family \"refuse\") refuses it. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental)."
+  },
+  "model-allow-false": "The model to run; optional (the target's default otherwise).",
+  "preamble-allow-false-claude-false": "The relay tools reach other families of agent (for you, Codex) when you leave target out. You have no subagents of your own in this turn, so you may name your own family's target when the work needs another agent of your kind; relay labels that work same-family.",
+  "preamble-allow-false-claude-true": "The relay tools are for reaching other families of agent (for you, Codex), which they reach when you leave target out. For helpers of your own kind, use your own subagents; name your own family's target through relay only when your task asks for that, and relay then labels the work same-family.",
+  "preamble-allow-false-codex-false": "The relay tools reach other families of agent (for you, Claude) when you leave target out. You have no subagents of your own in this turn, so you may name your own family's target when the work needs another agent of your kind; relay labels that work same-family.",
+  "preamble-allow-false-codex-true": "The relay tools are for reaching other families of agent (for you, Claude), which they reach when you leave target out. For helpers of your own kind, use your own subagents; name your own family's target through relay only when your task asks for that, and relay then labels the work same-family.",
+  "preamble-allow-false-copilot-false": "Relay cannot tell your own model's family, so name target in each relay call that starts something, picking a family other than your own model's unless your task says otherwise. Results are labelled family unknown.",
+  "preamble-allow-false-copilot-true": "Relay cannot tell your own model's family, so name target in each relay call that starts something, picking a family other than your own model's unless your task says otherwise. Results are labelled family unknown.",
+  "model-allow-true": "The model to run. Optional for claude and codex (their default otherwise). For copilot the model decides the family: name one (for example gpt-6.1-sol, gemini-3.8-flash, claude-sonnet-5.5) and relay labels the work by its family; \"auto\", or no model, lets Copilot choose, and relay then labels the family unknown.",
+  "preamble-allow-true-claude-false": "The relay tools reach other families of agent (for you, Codex or Copilot (experimental); name one as target unless relay's config sets your default) when you leave target out. You have no subagents of your own in this turn, so you may name your own family's target when the work needs another agent of your kind; relay labels that work same-family.",
+  "preamble-allow-true-claude-true": "The relay tools are for reaching other families of agent (for you, Codex or Copilot (experimental); name one as target unless relay's config sets your default), which they reach when you leave target out. For helpers of your own kind, use your own subagents; name your own family's target through relay only when your task asks for that, and relay then labels the work same-family.",
+  "preamble-allow-true-codex-false": "The relay tools reach other families of agent (for you, Claude or Copilot (experimental); name one as target unless relay's config sets your default) when you leave target out. You have no subagents of your own in this turn, so you may name your own family's target when the work needs another agent of your kind; relay labels that work same-family.",
+  "preamble-allow-true-codex-true": "The relay tools are for reaching other families of agent (for you, Claude or Copilot (experimental); name one as target unless relay's config sets your default), which they reach when you leave target out. For helpers of your own kind, use your own subagents; name your own family's target through relay only when your task asks for that, and relay then labels the work same-family.",
+  "preamble-allow-true-copilot-false": "Relay cannot tell your own model's family, so name target in each relay call that starts something, picking a family other than your own model's unless your task says otherwise. Results are labelled family unknown.",
+  "preamble-allow-true-copilot-true": "Relay cannot tell your own model's family, so name target in each relay call that starts something, picking a family other than your own model's unless your task says otherwise. Results are labelled family unknown.",
+  "model-refuse-false": "The model to run; optional (the target's default otherwise).",
+  "preamble-refuse-false-claude-false": "The relay tools reach another family of agent only (for you, Codex). You have no subagents of your own in this turn, so do the work of a helper of your own kind yourself.",
+  "preamble-refuse-false-claude-true": "The relay tools reach another family of agent only (for you, Codex). For helpers of your own kind, use your own subagents.",
+  "preamble-refuse-false-codex-false": "The relay tools reach another family of agent only (for you, Claude). You have no subagents of your own in this turn, so do the work of a helper of your own kind yourself.",
+  "preamble-refuse-false-codex-true": "The relay tools reach another family of agent only (for you, Claude). For helpers of your own kind, use your own subagents.",
+  "preamble-refuse-false-copilot-false": "The relay tools reach another family of agent only (for you, Claude or Codex; name one as target unless relay's config sets your default). You have no subagents of your own in this turn, so do the work of a helper of your own kind yourself.",
+  "preamble-refuse-false-copilot-true": "The relay tools reach another family of agent only (for you, Claude or Codex; name one as target unless relay's config sets your default). For helpers of your own kind, use your own subagents.",
+  "model-refuse-true": "The model to run. Optional for claude and codex (their default otherwise). For copilot the model decides the family, so name one relay's list knows (for example gpt-6.1-sol, gemini-3.8-flash, claude-sonnet-5.5): relay's config (same_family \"refuse\") refuses \"auto\", no model and ids its list does not name.",
+  "preamble-refuse-true-claude-false": "The relay tools reach another family of agent only (for you, Codex or Copilot (experimental); name one as target unless relay's config sets your default). You have no subagents of your own in this turn, so do the work of a helper of your own kind yourself.",
+  "preamble-refuse-true-claude-true": "The relay tools reach another family of agent only (for you, Codex or Copilot (experimental); name one as target unless relay's config sets your default). For helpers of your own kind, use your own subagents.",
+  "preamble-refuse-true-codex-false": "The relay tools reach another family of agent only (for you, Claude or Copilot (experimental); name one as target unless relay's config sets your default). You have no subagents of your own in this turn, so do the work of a helper of your own kind yourself.",
+  "preamble-refuse-true-codex-true": "The relay tools reach another family of agent only (for you, Claude or Copilot (experimental); name one as target unless relay's config sets your default). For helpers of your own kind, use your own subagents.",
+  "preamble-refuse-true-copilot-false": "The relay tools reach another family of agent only (for you, Claude or Codex; name one as target unless relay's config sets your default). You have no subagents of your own in this turn, so do the work of a helper of your own kind yourself.",
+  "preamble-refuse-true-copilot-true": "The relay tools reach another family of agent only (for you, Claude or Codex; name one as target unless relay's config sets your default). For helpers of your own kind, use your own subagents.",
+  "side-anthropic-anthropic": "another Claude agent, of your own family (Anthropic)",
+  "review-anthropic-anthropic": " This is a same-family review: both reviewers run Anthropic's models. Say so when you report it.",
+  "summary-job-anthropic-anthropic": "Same-family: caller working with launched. Both run Anthropic's models; this is not a cross-family job.",
+  "summary-consult-anthropic-anthropic": "Same-family: caller working with launched. Both run Anthropic's models; this is not a cross-family consult.",
+  "summary-discussion-anthropic-anthropic": "Same-family: caller working with launched. Both run Anthropic's models; this is not a cross-family discussion.",
+  "summary-review-anthropic-anthropic": "Same-family: caller working with launched. Both run Anthropic's models; this is not a cross-family review.",
+  "side-anthropic-openai": "a Claude agent (Anthropic)",
+  "review-anthropic-openai": "",
+  "summary-job-anthropic-openai": "Cross-family: caller working with launched.",
+  "summary-consult-anthropic-openai": "Cross-family: caller working with launched.",
+  "summary-discussion-anthropic-openai": "Cross-family: caller working with launched.",
+  "summary-review-anthropic-openai": "Cross-family: caller working with launched.",
+  "side-anthropic-unknown": "a Claude agent (Anthropic)",
+  "review-anthropic-unknown": " Relay cannot show the two reviewers are of different families. Report it as family unknown.",
+  "summary-job-anthropic-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this job is not known to be cross-family.",
+  "summary-consult-anthropic-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this consult is not known to be cross-family.",
+  "summary-discussion-anthropic-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this discussion is not known to be cross-family.",
+  "summary-review-anthropic-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this review is not known to be cross-family.",
+  "side-openai-anthropic": "a Codex agent (OpenAI)",
+  "review-openai-anthropic": "",
+  "summary-job-openai-anthropic": "Cross-family: caller working with launched.",
+  "summary-consult-openai-anthropic": "Cross-family: caller working with launched.",
+  "summary-discussion-openai-anthropic": "Cross-family: caller working with launched.",
+  "summary-review-openai-anthropic": "Cross-family: caller working with launched.",
+  "side-openai-openai": "another Codex agent, of your own family (OpenAI)",
+  "review-openai-openai": " This is a same-family review: both reviewers run OpenAI's models. Say so when you report it.",
+  "summary-job-openai-openai": "Same-family: caller working with launched. Both run OpenAI's models; this is not a cross-family job.",
+  "summary-consult-openai-openai": "Same-family: caller working with launched. Both run OpenAI's models; this is not a cross-family consult.",
+  "summary-discussion-openai-openai": "Same-family: caller working with launched. Both run OpenAI's models; this is not a cross-family discussion.",
+  "summary-review-openai-openai": "Same-family: caller working with launched. Both run OpenAI's models; this is not a cross-family review.",
+  "side-openai-unknown": "a Codex agent (OpenAI)",
+  "review-openai-unknown": " Relay cannot show the two reviewers are of different families. Report it as family unknown.",
+  "summary-job-openai-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this job is not known to be cross-family.",
+  "summary-consult-openai-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this consult is not known to be cross-family.",
+  "summary-discussion-openai-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this discussion is not known to be cross-family.",
+  "summary-review-openai-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this review is not known to be cross-family.",
+  "side-unknown-anthropic": "an agent whose family relay cannot tell",
+  "review-unknown-anthropic": " Relay cannot show the two reviewers are of different families. Report it as family unknown.",
+  "summary-job-unknown-anthropic": "Family unknown: relay cannot show that caller and launched are of different families, so this job is not known to be cross-family.",
+  "summary-consult-unknown-anthropic": "Family unknown: relay cannot show that caller and launched are of different families, so this consult is not known to be cross-family.",
+  "summary-discussion-unknown-anthropic": "Family unknown: relay cannot show that caller and launched are of different families, so this discussion is not known to be cross-family.",
+  "summary-review-unknown-anthropic": "Family unknown: relay cannot show that caller and launched are of different families, so this review is not known to be cross-family.",
+  "side-unknown-openai": "an agent whose family relay cannot tell",
+  "review-unknown-openai": " Relay cannot show the two reviewers are of different families. Report it as family unknown.",
+  "summary-job-unknown-openai": "Family unknown: relay cannot show that caller and launched are of different families, so this job is not known to be cross-family.",
+  "summary-consult-unknown-openai": "Family unknown: relay cannot show that caller and launched are of different families, so this consult is not known to be cross-family.",
+  "summary-discussion-unknown-openai": "Family unknown: relay cannot show that caller and launched are of different families, so this discussion is not known to be cross-family.",
+  "summary-review-unknown-openai": "Family unknown: relay cannot show that caller and launched are of different families, so this review is not known to be cross-family.",
+  "side-unknown-unknown": "an agent whose family relay cannot tell",
+  "review-unknown-unknown": " Relay cannot show the two reviewers are of different families. Report it as family unknown.",
+  "summary-job-unknown-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this job is not known to be cross-family.",
+  "summary-consult-unknown-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this consult is not known to be cross-family.",
+  "summary-discussion-unknown-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this discussion is not known to be cross-family.",
+  "summary-review-unknown-unknown": "Family unknown: relay cannot show that caller and launched are of different families, so this review is not known to be cross-family.",
+  "resolution-allow-null-undefined": {
+    "reason": "relay cannot tell which family of model this session runs, so it does not choose an agent for you. Call again with target (claude (Anthropic), codex (OpenAI)), picking a family other than your own model's unless the user asked otherwise; or the user can set default_target.unknown in relay's config."
+  },
+  "resolution-allow-null-claude": {
+    "target": "claude"
+  },
+  "resolution-allow-null-codex": {
+    "target": "codex"
+  },
+  "resolution-allow-null-copilot": {
+    "reason": "Copilot (experimental) is switched off in relay's config (targets.copilot.enabled). Do this part yourself."
+  },
+  "resolution-allow-claude-undefined": {
+    "target": "codex"
+  },
+  "resolution-allow-claude-claude": {
+    "target": "claude"
+  },
+  "resolution-allow-claude-codex": {
+    "target": "codex"
+  },
+  "resolution-allow-claude-copilot": {
+    "reason": "Copilot (experimental) is switched off in relay's config (targets.copilot.enabled). Use Codex instead, or do this part yourself."
+  },
+  "resolution-allow-codex-undefined": {
+    "target": "claude"
+  },
+  "resolution-allow-codex-claude": {
+    "target": "claude"
+  },
+  "resolution-allow-codex-codex": {
+    "target": "codex"
+  },
+  "resolution-allow-codex-copilot": {
+    "reason": "Copilot (experimental) is switched off in relay's config (targets.copilot.enabled). Use Claude instead, or do this part yourself."
+  },
+  "resolution-refuse-null-undefined": {
+    "reason": "relay cannot tell which agent it is running inside, and its config (same_family \"refuse\") connects different families of agent only, which it cannot check for a caller it does not know, so it reaches no agent from here. Register relay for your actual host (`relay install <host>`) and start the session again. For a multi-model harness, the user can set same_family \"allow\"; then name target. Copying a single-family registration does not identify a multi-model session."
+  },
+  "resolution-refuse-null-claude": {
+    "reason": "relay cannot tell which agent it is running inside, and its config (same_family \"refuse\") connects different families of agent only, which it cannot check for a caller it does not know, so it reaches no agent from here. Register relay for your actual host (`relay install <host>`) and start the session again. For a multi-model harness, the user can set same_family \"allow\"; then name target. Copying a single-family registration does not identify a multi-model session."
+  },
+  "resolution-refuse-null-codex": {
+    "reason": "relay cannot tell which agent it is running inside, and its config (same_family \"refuse\") connects different families of agent only, which it cannot check for a caller it does not know, so it reaches no agent from here. Register relay for your actual host (`relay install <host>`) and start the session again. For a multi-model harness, the user can set same_family \"allow\"; then name target. Copying a single-family registration does not identify a multi-model session."
+  },
+  "resolution-refuse-null-copilot": {
+    "reason": "relay cannot tell which agent it is running inside, and its config (same_family \"refuse\") connects different families of agent only, which it cannot check for a caller it does not know, so it reaches no agent from here. Register relay for your actual host (`relay install <host>`) and start the session again. For a multi-model harness, the user can set same_family \"allow\"; then name target. Copying a single-family registration does not identify a multi-model session."
+  },
+  "resolution-refuse-claude-undefined": {
+    "target": "codex"
+  },
+  "resolution-refuse-claude-claude": {
+    "reason": "relay's config (same_family \"refuse\") reaches only the other family of agent. You are a Claude agent: for another Claude agent use your own subagents, and use relay for Codex. If the user wants such calls through relay anyway, they can set \"same_family\": \"allow\" in relay's config."
+  },
+  "resolution-refuse-claude-codex": {
+    "target": "codex"
+  },
+  "resolution-refuse-claude-copilot": {
+    "reason": "Copilot (experimental) runs models of several families, so relay must know which one would answer: name it with model (for example gpt-6.1-sol, gpt-6-astra, gpt-6-luna, gpt-5.4, gpt-5.4-mini, gpt-5.3-codex), or set targets.copilot.default_model in relay's config."
+  },
+  "resolution-refuse-codex-undefined": {
+    "target": "claude"
+  },
+  "resolution-refuse-codex-claude": {
+    "target": "claude"
+  },
+  "resolution-refuse-codex-codex": {
+    "reason": "relay's config (same_family \"refuse\") reaches only the other family of agent. You are a Codex agent: for another Codex agent use your own subagents, and use relay for Claude. If the user wants such calls through relay anyway, they can set \"same_family\": \"allow\" in relay's config."
+  },
+  "resolution-refuse-codex-copilot": {
+    "reason": "Copilot (experimental) runs models of several families, so relay must know which one would answer: name it with model (for example claude-sonnet-5.5, claude-opus-5.5, claude-haiku-5.5, claude-haiku-4.5, gemini-3.8-flash, gemini-3.7-flash), or set targets.copilot.default_model in relay's config."
+  },
+  "unknownDefault": "relay reaches coding agents of several families: claude (Anthropic), codex (OpenAI). It cannot tell which family of model this session runs, so it does not choose for you: name target in each call that starts something, or leave it out to reach codex (default_target.unknown in relay's config), picking a family other than your own model's unless the user asks otherwise. For agents of your own family, use your host's own subagents. Every result names both sides' families (families); from here the caller's is unknown. delegate hands off work, ask puts a question, discuss holds a turn-by-turn discussion with you as one side, review gets an independent review to set against your own.",
+  "leaveOutNone": "Which agent to reach. Name one of the agents of another family (none is switched on); relay cannot choose for you. claude is your own family: for Claude work use your own subagents, and name claude only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental).",
+  "leaveOutSeveral": "Which agent to reach. Name one of the agents of another family (codex (OpenAI), copilot (experimental; the family of the model you give)); relay cannot choose for you. claude is your own family: for Claude work use your own subagents, and name claude only when the user asks for that, or when this session has no subagents of its own; relay then labels the work same-family. Registered targets: claude, codex, copilot (experimental), gemini, grok (experimental).",
+  "unknownOff": "default_target.unknown in relay's config names copilot, which is switched off. Name a target, or fix the config.",
+  "none": "no agent of another family is switched on in relay's config, so a call that names no target reaches nothing. Do this part yourself or with your own subagents."
+}

@@ -1,0 +1,49 @@
+# GitHub-hosted CI only. Never register a runner of your own or add secrets to this repository: a
+# workflow in a fork's pull request runs the fork's YAML, so either would be reachable from any PR.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (Node ${{ matrix.node }})
+    runs-on: macos-latest
+    timeout-minutes: 60
+    # Node 24 is relay's floor and what its releases are qualified on: that job must pass. Node 26 runs
+    # to catch what a newer Node breaks, but on GitHub's shared macOS runners a few of the suite's
+    # timing-sensitive tests can miss their waits there, so its result is informational.
+    continue-on-error: ${{ matrix.node != '24' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # package.json engines: node >= 24.15 ("24" is the latest 24.x; "26" the newest release line,
+        # named because setup-node's "current" can resolve to a pre-release)
+        node: ["24", "26"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install (from npm-shrinkwrap.json)
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Typecheck
+        run: npm run typecheck
+      # The suite runs against stub agents. Its live suites spend real model usage and run only when
+      # switched on by their environment variables, which CI never sets, so they skip here. GitHub's
+      # macOS runners have three cores: two test files at a time, not npm test's eight, keeps the
+      # suite's timing-sensitive cancel and teardown tests within their waits.
+      - name: Test
+        run: node --test --test-timeout=600000 --test-concurrency=2 test/*.test.ts

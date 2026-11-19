@@ -1,0 +1,28 @@
+{
+  "status": "refused",
+  "outcome": "refused",
+  "refusal": {
+    "vendor": "openai",
+    "message": "This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request. Otherwise, confirm that the access_programs.cyber parameter is set to the appropriate tier, and note that some cybersecurity requests are still limited, even when Daybreak is on.",
+    "code": "cyberPolicy"
+  },
+  "unfinished": true,
+  "outcome_note": "Stopped by OpenAI's safety system. Relay neither retried nor rephrased the request, switched models, nor used a fallback target. A caller may explicitly resume the session.",
+  "result": {
+    "summary": null,
+    "files_changed": null,
+    "branch": null,
+    "tests_run": null,
+    "open_issues": null,
+    "report_parsed": false,
+    "final_message": "partial work",
+    "outcome": "refused",
+    "refusal": {
+      "vendor": "openai",
+      "message": "This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request. Otherwise, confirm that the access_programs.cyber parameter is set to the appropriate tier, and note that some cybersecurity requests are still limited, even when Daybreak is on.",
+      "code": "cyberPolicy"
+    },
+    "unfinished": true,
+    "note": "Stopped by OpenAI's safety system. Relay neither retried nor rephrased the request, switched models, nor used a fallback target. A caller may explicitly resume the session."
+  }
+}

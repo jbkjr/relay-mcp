@@ -1,0 +1,280 @@
+{
+  "versions": {
+    "codex": "0.163.0",
+    "claude": "2.1.302"
+  },
+  "claude": [
+    {
+      "sources": "",
+      "settings": {},
+      "init": {
+        "skills": [
+          "deep-research",
+          "dataviz",
+          "update-config",
+          "verify",
+          "debug",
+          "code-review",
+          "simplify",
+          "batch",
+          "fewer-permission-prompts",
+          "doctor",
+          "loop",
+          "claude-api",
+          "workflow-authoring",
+          "run",
+          "run-skill-generator",
+          "plugin-authoring"
+        ],
+        "plugins": [
+          {
+            "name": "cc-plugin-agents-md",
+            "path": "builtin",
+            "source": "cc-plugin-agents-md@builtin"
+          },
+          {
+            "name": "cc-plugin-plugin-authoring",
+            "path": "builtin",
+            "source": "cc-plugin-plugin-authoring@builtin"
+          }
+        ]
+      }
+    },
+    {
+      "sources": "",
+      "settings": {
+        "disableBundledSkills": true,
+        "skillOverrides": {
+          "user-probe": "off",
+          "repo-probe": "off",
+          "doctor": "off",
+          "plugin-authoring": "off"
+        },
+        "enabledPlugins": {
+          "cc-plugin-agents-md@builtin": false,
+          "cc-plugin-claude-test@builtin": false,
+          "cc-plugin-diff@builtin": false,
+          "cc-plugin-easel@builtin": false,
+          "cc-plugin-mermaid@builtin": false,
+          "cc-plugin-mods-guide@builtin": false,
+          "cc-plugin-plugin-authoring@builtin": false,
+          "cc-plugin-privacy@builtin": false,
+          "cc-plugin-responsive-mode@builtin": false,
+          "cc-plugin-sec-default@builtin": false,
+          "cc-plugin-telemetry@builtin": false,
+          "cc-plugin-tips@builtin": false,
+          "cc-plugin-you-should-know@builtin": false,
+          "claude-platform@builtin": false
+        }
+      },
+      "init": {
+        "skills": [],
+        "plugins": []
+      }
+    },
+    {
+      "sources": "user,project,local",
+      "settings": {},
+      "init": {
+        "skills": [
+          "user-probe",
+          "repo-probe",
+          "deep-research",
+          "dataviz",
+          "update-config",
+          "verify",
+          "debug",
+          "code-review",
+          "simplify",
+          "batch",
+          "fewer-permission-prompts",
+          "doctor",
+          "loop",
+          "claude-api",
+          "workflow-authoring",
+          "run",
+          "run-skill-generator",
+          "plugin-authoring"
+        ],
+        "plugins": [
+          {
+            "name": "cc-plugin-agents-md",
+            "path": "builtin",
+            "source": "cc-plugin-agents-md@builtin"
+          },
+          {
+            "name": "cc-plugin-plugin-authoring",
+            "path": "builtin",
+            "source": "cc-plugin-plugin-authoring@builtin"
+          }
+        ]
+      }
+    },
+    {
+      "sources": "user,project,local",
+      "settings": {
+        "disableBundledSkills": true,
+        "skillOverrides": {
+          "user-probe": "off",
+          "repo-probe": "off",
+          "doctor": "off",
+          "plugin-authoring": "off"
+        },
+        "enabledPlugins": {
+          "cc-plugin-agents-md@builtin": false,
+          "cc-plugin-claude-test@builtin": false,
+          "cc-plugin-diff@builtin": false,
+          "cc-plugin-easel@builtin": false,
+          "cc-plugin-mermaid@builtin": false,
+          "cc-plugin-mods-guide@builtin": false,
+          "cc-plugin-plugin-authoring@builtin": false,
+          "cc-plugin-privacy@builtin": false,
+          "cc-plugin-responsive-mode@builtin": false,
+          "cc-plugin-sec-default@builtin": false,
+          "cc-plugin-telemetry@builtin": false,
+          "cc-plugin-tips@builtin": false,
+          "cc-plugin-you-should-know@builtin": false,
+          "claude-platform@builtin": false
+        }
+      },
+      "init": {
+        "skills": [],
+        "plugins": []
+      }
+    }
+  ],
+  "codexEmpty": {
+    "data": [
+      {
+        "cwd": "@ROOT@/repo",
+        "skills": [
+          {
+            "name": "repo-probe",
+            "path": "@ROOT@/repo/.agents/skills/repo-probe/SKILL.md",
+            "scope": "repo",
+            "enabled": false
+          },
+          {
+            "name": "agents-probe",
+            "path": "@ROOT@/home/.agents/skills/agents-probe/SKILL.md",
+            "scope": "user",
+            "enabled": false
+          },
+          {
+            "name": "user-probe",
+            "path": "@ROOT@/home/.codex/skills/user-probe/SKILL.md",
+            "scope": "user",
+            "enabled": false
+          },
+          {
+            "name": "imagegen",
+            "path": "@ROOT@/home/.codex/skills/.system/imagegen/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          },
+          {
+            "name": "openai-docs",
+            "path": "@ROOT@/home/.codex/skills/.system/openai-docs/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          },
+          {
+            "name": "review-agent",
+            "path": "@ROOT@/home/.codex/skills/.system/review-agent/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          },
+          {
+            "name": "skill-creator",
+            "path": "@ROOT@/home/.codex/skills/.system/skill-creator/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          },
+          {
+            "name": "skill-installer",
+            "path": "@ROOT@/home/.codex/skills/.system/skill-installer/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          }
+        ],
+        "errors": []
+      }
+    ]
+  },
+  "codexGiven": {
+    "data": [
+      {
+        "cwd": "@ROOT@/repo",
+        "skills": [
+          {
+            "name": "repo-probe",
+            "path": "@ROOT@/repo/.agents/skills/repo-probe/SKILL.md",
+            "scope": "repo",
+            "enabled": false
+          },
+          {
+            "name": "agents-probe",
+            "path": "@ROOT@/home/.agents/skills/agents-probe/SKILL.md",
+            "scope": "user",
+            "enabled": false
+          },
+          {
+            "name": "given-probe",
+            "path": "@ROOT@/package/skills/given-probe/SKILL.md",
+            "scope": "user",
+            "enabled": true
+          },
+          {
+            "name": "user-probe",
+            "path": "@ROOT@/home/.codex/skills/user-probe/SKILL.md",
+            "scope": "user",
+            "enabled": false
+          },
+          {
+            "name": "imagegen",
+            "path": "@ROOT@/home/.codex/skills/.system/imagegen/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          },
+          {
+            "name": "openai-docs",
+            "path": "@ROOT@/home/.codex/skills/.system/openai-docs/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          },
+          {
+            "name": "review-agent",
+            "path": "@ROOT@/home/.codex/skills/.system/review-agent/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          },
+          {
+            "name": "skill-creator",
+            "path": "@ROOT@/home/.codex/skills/.system/skill-creator/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          },
+          {
+            "name": "skill-installer",
+            "path": "@ROOT@/home/.codex/skills/.system/skill-installer/SKILL.md",
+            "scope": "system",
+            "enabled": false
+          }
+        ],
+        "errors": []
+      }
+    ]
+  },
+  "claudeGiven": {
+    "skills": [
+      "relay-skills:given-probe"
+    ],
+    "plugins": [
+      {
+        "name": "relay-skills",
+        "path": "@ROOT@/package",
+        "source": "relay-skills@inline"
+      }
+    ]
+  }
+}

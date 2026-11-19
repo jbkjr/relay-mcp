@@ -1,0 +1,59 @@
+#!/bin/sh
+# Launcher for relay. Hosts register this file, not a Node binary, so upgrading or removing a
+# Node version does not break the registration. It runs the first Node >= 24.15 it finds:
+# RELAY_NODE, then PATH, then the usual version managers (fnm, nvm, Volta, asdf, mise), then
+# Homebrew. Set RELAY_NODE to the path of a node binary to choose one yourself.
+# Every other program it runs is named by its absolute path in the system volume, so no program put
+# earlier on PATH runs here (review r_0c11d860 X1; test/executables.test.ts checks this file).
+self="$0"
+while [ -L "$self" ]; do
+  link=$(/usr/bin/readlink "$self")
+  case "$link" in /*) self="$link" ;; *) self="$(/usr/bin/dirname "$self")/$link" ;; esac
+done
+# CDPATH is cleared for the cd: with it set, a relative "bin/.." is looked up elsewhere, or echoed.
+root=$(CDPATH= cd -- "$(/usr/bin/dirname -- "$self")/.." && pwd)
+
+# True if $1 is a Node new enough for relay. A host starts this script with its own pipes on
+# stdin and stdout, so the check is kept away from both.
+usable() {
+  [ -n "$1" ] && [ -x "$1" ] || return 1
+  "$1" -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>24||(a===24&&b>=15)?0:1)' </dev/null >/dev/null 2>&1
+}
+
+if [ -n "$RELAY_NODE" ]; then
+  usable "$RELAY_NODE" && exec "$RELAY_NODE" "$root/dist/cli.js" "$@"
+  echo "relay: RELAY_NODE ($RELAY_NODE) is not a Node >= 24.15; looking elsewhere" >&2
+fi
+
+for node in \
+  "$(command -v node 2>/dev/null)" \
+  "${FNM_DIR:+$FNM_DIR/aliases/default/bin/node}" \
+  "$HOME/.local/share/fnm/aliases/default/bin/node" \
+  "$HOME/Library/Application Support/fnm/aliases/default/bin/node" \
+  "$HOME/.fnm/aliases/default/bin/node"; do
+  usable "$node" && exec "$node" "$root/dist/cli.js" "$@"
+done
+
+# nvm keeps one directory per installed version (v24.15.0, ...). Newest first.
+nvm="${NVM_DIR:-$HOME/.nvm}/versions/node"
+if [ -d "$nvm" ]; then
+  for version in $(/bin/ls "$nvm" 2>/dev/null | /usr/bin/sort -t. -k1.2,1nr -k2,2nr -k3,3nr); do
+    usable "$nvm/$version/bin/node" && exec "$nvm/$version/bin/node" "$root/dist/cli.js" "$@"
+  done
+fi
+
+# Volta, asdf and mise put a `node` in a fixed place that runs whichever version is current.
+for node in \
+  "${VOLTA_HOME:-$HOME/.volta}/bin/node" \
+  "${ASDF_DATA_DIR:-$HOME/.asdf}/shims/node" \
+  "${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shims/node" \
+  /opt/homebrew/bin/node \
+  /usr/local/bin/node \
+  /opt/homebrew/opt/node@*/bin/node \
+  /usr/local/opt/node@*/bin/node; do
+  usable "$node" && exec "$node" "$root/dist/cli.js" "$@"
+done
+
+echo "relay: no Node >= 24.15 found (looked at RELAY_NODE, PATH, fnm, nvm, Volta, asdf, mise and Homebrew)." >&2
+echo "relay: install Node 24.15 or newer (Node 24 LTS or a later release), or set RELAY_NODE to the path of its node binary." >&2
+exit 127

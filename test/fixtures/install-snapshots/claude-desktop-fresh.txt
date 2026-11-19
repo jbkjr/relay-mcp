@@ -1,0 +1,101 @@
+$ relay install claude-desktop
+exit status 1
+--- stdout
+# mcpServers.relay-desktop in <TMP>/home/Library/Application Support/Claude/claude_desktop_config.json:
+{
+  "command": "<ROOT>/bin/relay",
+  "args": [
+    "mcp",
+    "--host",
+    "claude",
+    "--desktop"
+  ],
+  "env": {
+    "PATH": "<NODE_DIR>:<TMP>/bin:/usr/bin:/usr/local/bin:/bin:/usr/sbin:/sbin"
+  }
+}
+# relay-desktop is the desktop app's own relay, and is shared. Desktop chats in the main window share one relay process. Cowork, the Code tab's in-app bridge, remote Cowork and widgets share a second. Within each process every conversation carries its own session token, which keeps its jobs, approval requests and events apart from the others'. Code-tab sessions also have their own dedicated relay registration. The token is a bearer key its model holds: it separates conversations that use relay honestly. Configuration describes the topology; doctor does not observe calls or verify which conversation used it. Claude.app 2.42304.0's code was checked on <DATE>: neither process forwards per-conversation metadata. Pass cwd on merge and on starts (a new ask without it consults in a new, empty directory of its own); no session on this shared entry gets an approval dialog, confirm or notices, and its waits end after 50 s, under the app's 60 s tool timeout (README, "Claude desktop app and Cowork").
+--- stderr
+
+relay install claude-desktop: <TMP>/home/Library/Application Support/Claude/claude_desktop_config.json does not exist; open the Claude desktop app once first.
+
+Nothing was changed (this was a dry run, and with --write it would have stopped here too).
+
+$ relay install claude-desktop --force
+exit status 1
+--- stdout
+# mcpServers.relay-desktop in <TMP>/home/Library/Application Support/Claude/claude_desktop_config.json:
+{
+  "command": "<ROOT>/bin/relay",
+  "args": [
+    "mcp",
+    "--host",
+    "claude",
+    "--desktop"
+  ],
+  "env": {
+    "PATH": "<NODE_DIR>:<TMP>/bin:/usr/bin:/usr/local/bin:/bin:/usr/sbin:/sbin"
+  }
+}
+# relay-desktop is the desktop app's own relay, and is shared. Desktop chats in the main window share one relay process. Cowork, the Code tab's in-app bridge, remote Cowork and widgets share a second. Within each process every conversation carries its own session token, which keeps its jobs, approval requests and events apart from the others'. Code-tab sessions also have their own dedicated relay registration. The token is a bearer key its model holds: it separates conversations that use relay honestly. Configuration describes the topology; doctor does not observe calls or verify which conversation used it. Claude.app 2.42304.0's code was checked on <DATE>: neither process forwards per-conversation metadata. Pass cwd on merge and on starts (a new ask without it consults in a new, empty directory of its own); no session on this shared entry gets an approval dialog, confirm or notices, and its waits end after 50 s, under the app's 60 s tool timeout (README, "Claude desktop app and Cowork").
+--- stderr
+
+relay install claude-desktop: <TMP>/home/Library/Application Support/Claude/claude_desktop_config.json does not exist; open the Claude desktop app once first.
+
+Nothing was changed (this was a dry run, and with --write it would have stopped here too).
+
+$ relay uninstall claude-desktop
+exit status 0
+--- stdout
+# no installation record for the Claude desktop app; going by what is installed
+# <TMP>/home/Library/Application Support/Claude/claude_desktop_config.json does not exist
+
+Nothing to do: nothing of relay's was found in the Claude desktop app.
+
+Not removed, because it can hold your work or your logins:
+  <TMP>/home/.local/state/relay (not present)
+      relay's state: the registry of runs, logs, the prompts sent and the transcripts
+  <TMP>/home/.local/share/relay/worktrees (not present)
+      the worktrees of write jobs
+  <TMP>/home/.local/share/relay/consult (not present)
+      the directories questions without a project were asked in
+  <TMP>/home/.local/share/relay/harness (not present)
+      the state of the harnesses relay confines itself (each item's Copilot, Grok or Gemini home)
+  <TMP>/home/.config/relay (not present)
+      your relay configuration, its local settings (local.json), the installation record and what install saved
+  <TMP>/home/.local/share/relay-codex-home (not present) [holds a login (auth.json)]
+      relay's Codex home: the Codex login relay's jobs run on, and their Codex sessions
+  <TMP>/home/.local/share/relay-codex-pins (not present)
+      relay's pinned Codex releases (sealed read-only, so they are made writable first) and the qualifier's results
+  <TMP>/home/.config/relay-keys (not present) [holds API keys]
+      the API key files relay hands a key-only target (Gemini); local.json can name a key file elsewhere, which is yours to delete
+  <TMP>/home/.relay-t (not present)
+      relay's private sockets and per-turn state
+  <TMP>/home/.rn (not present)
+      the short temp directories relay gives Claude's turns
+  <TMP>/home/.rsm/q (not present)
+      the Codex qualifier's scratch runs
+  in each repository relay ran a write job in: the line `.relay/` in .git/info/exclude, and any relay/* branches
+
+To remove them by hand, in this order:
+  1. <ROOT>/bin/relay clean
+     First, while the state directory is still there. It commits work left in finished jobs' worktrees to
+     their branches, removes those worktrees, and deletes relay/* branches that are already merged. It lists
+     the unmerged branches it kept, so no work is lost.
+  2. In each of those repositories: `git branch --list 'relay/*'` shows what is left. Merge what you want,
+     delete the rest with `git branch -D <branch>`, and delete the line `.relay/` from .git/info/exclude.
+  3. Stop the Codex qualifier's LaunchAgent, if you installed it:
+     # none found in ~/Library/LaunchAgents; if you installed one under another name: launchctl bootout gui/$(id -u)/<label>, then delete its plist and <TMP>/home/Library/Logs/relay-codex-qualifier
+  4. Then the rest, after checking each: the ones marked above hold credentials.
+     rm -rf <TMP>/home/.local/state/relay
+     rm -rf <TMP>/home/.local/share/relay/worktrees
+     rm -rf <TMP>/home/.local/share/relay/consult
+     rm -rf <TMP>/home/.local/share/relay/harness
+     rm -rf <TMP>/home/.config/relay
+     rm -rf <TMP>/home/.local/share/relay-codex-home
+     chmod -R u+w <TMP>/home/.local/share/relay-codex-pins && rm -rf <TMP>/home/.local/share/relay-codex-pins
+     rm -rf <TMP>/home/.config/relay-keys
+     rm -rf <TMP>/home/.relay-t
+     rm -rf <TMP>/home/.rn
+     chmod -R u+w <TMP>/home/.rsm/q && rm -rf <TMP>/home/.rsm/q
+--- stderr

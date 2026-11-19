@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+import { main } from "./stub-agent.mjs";
+import acp from "./targets/acp.mjs";
+await main(acp);

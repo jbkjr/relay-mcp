@@ -1,0 +1,7 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": true,
+  "stop_reason": "refusal",
+  "result": "fixture refusal message"
+}

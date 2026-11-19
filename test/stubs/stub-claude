@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+import { main } from "./stub-agent.mjs";
+import claude from "./targets/claude.mjs";
+await main(claude);

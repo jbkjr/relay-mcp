@@ -1,0 +1,246 @@
+{
+  "job-anthropic-anthropic": {
+    "caller": "anthropic",
+    "launched": "anthropic",
+    "relation": "same-family",
+    "summary": "Same-family: Claude (Anthropic) working with Claude (Anthropic). Both run Anthropic's models; this is not a cross-family job.",
+    "note": "Relay started Claude (Anthropic) because the call named it. Its tool descriptions give your own subagents first place for Claude work, unless the user asked for relay or this session has none."
+  },
+  "job-anthropic-openai": {
+    "caller": "anthropic",
+    "launched": "openai",
+    "relation": "cross-family",
+    "summary": "Cross-family: Claude (Anthropic) working with Codex (OpenAI)."
+  },
+  "job-anthropic-unknown": {
+    "caller": "anthropic",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that Claude (Anthropic) and Codex (family unknown) are of different families, so this job is not known to be cross-family.",
+    "note": "Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "job-openai-anthropic": {
+    "caller": "openai",
+    "launched": "anthropic",
+    "relation": "cross-family",
+    "summary": "Cross-family: Codex (OpenAI) working with Claude (Anthropic)."
+  },
+  "job-openai-openai": {
+    "caller": "openai",
+    "launched": "openai",
+    "relation": "same-family",
+    "summary": "Same-family: Codex (OpenAI) working with Codex (OpenAI). Both run OpenAI's models; this is not a cross-family job.",
+    "note": "Relay started Codex (OpenAI) because the call named it. Its tool descriptions give your own subagents first place for Codex work, unless the user asked for relay or this session has none."
+  },
+  "job-openai-unknown": {
+    "caller": "openai",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that Codex (OpenAI) and Codex (family unknown) are of different families, so this job is not known to be cross-family.",
+    "note": "Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "job-unknown-anthropic": {
+    "caller": "unknown",
+    "launched": "anthropic",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Claude (Anthropic) are of different families, so this job is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\")."
+  },
+  "job-unknown-openai": {
+    "caller": "unknown",
+    "launched": "openai",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Codex (OpenAI) are of different families, so this job is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\")."
+  },
+  "job-unknown-unknown": {
+    "caller": "unknown",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Codex (family unknown) are of different families, so this job is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\"). Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "thread-anthropic-anthropic": {
+    "caller": "anthropic",
+    "launched": "anthropic",
+    "relation": "same-family",
+    "summary": "Same-family: Claude (Anthropic) working with Claude (Anthropic). Both run Anthropic's models; this is not a cross-family consult.",
+    "note": "Relay started Claude (Anthropic) because the call named it. Its tool descriptions give your own subagents first place for Claude work, unless the user asked for relay or this session has none."
+  },
+  "thread-anthropic-openai": {
+    "caller": "anthropic",
+    "launched": "openai",
+    "relation": "cross-family",
+    "summary": "Cross-family: Claude (Anthropic) working with Codex (OpenAI)."
+  },
+  "thread-anthropic-unknown": {
+    "caller": "anthropic",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that Claude (Anthropic) and Codex (family unknown) are of different families, so this consult is not known to be cross-family.",
+    "note": "Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "thread-openai-anthropic": {
+    "caller": "openai",
+    "launched": "anthropic",
+    "relation": "cross-family",
+    "summary": "Cross-family: Codex (OpenAI) working with Claude (Anthropic)."
+  },
+  "thread-openai-openai": {
+    "caller": "openai",
+    "launched": "openai",
+    "relation": "same-family",
+    "summary": "Same-family: Codex (OpenAI) working with Codex (OpenAI). Both run OpenAI's models; this is not a cross-family consult.",
+    "note": "Relay started Codex (OpenAI) because the call named it. Its tool descriptions give your own subagents first place for Codex work, unless the user asked for relay or this session has none."
+  },
+  "thread-openai-unknown": {
+    "caller": "openai",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that Codex (OpenAI) and Codex (family unknown) are of different families, so this consult is not known to be cross-family.",
+    "note": "Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "thread-unknown-anthropic": {
+    "caller": "unknown",
+    "launched": "anthropic",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Claude (Anthropic) are of different families, so this consult is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\")."
+  },
+  "thread-unknown-openai": {
+    "caller": "unknown",
+    "launched": "openai",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Codex (OpenAI) are of different families, so this consult is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\")."
+  },
+  "thread-unknown-unknown": {
+    "caller": "unknown",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Codex (family unknown) are of different families, so this consult is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\"). Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "discussion-anthropic-anthropic": {
+    "caller": "anthropic",
+    "launched": "anthropic",
+    "relation": "same-family",
+    "summary": "Same-family: Claude (Anthropic) working with Claude (Anthropic). Both run Anthropic's models; this is not a cross-family discussion.",
+    "note": "Relay started Claude (Anthropic) because the call named it. Its tool descriptions give your own subagents first place for Claude work, unless the user asked for relay or this session has none."
+  },
+  "discussion-anthropic-openai": {
+    "caller": "anthropic",
+    "launched": "openai",
+    "relation": "cross-family",
+    "summary": "Cross-family: Claude (Anthropic) working with Codex (OpenAI)."
+  },
+  "discussion-anthropic-unknown": {
+    "caller": "anthropic",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that Claude (Anthropic) and Codex (family unknown) are of different families, so this discussion is not known to be cross-family.",
+    "note": "Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "discussion-openai-anthropic": {
+    "caller": "openai",
+    "launched": "anthropic",
+    "relation": "cross-family",
+    "summary": "Cross-family: Codex (OpenAI) working with Claude (Anthropic)."
+  },
+  "discussion-openai-openai": {
+    "caller": "openai",
+    "launched": "openai",
+    "relation": "same-family",
+    "summary": "Same-family: Codex (OpenAI) working with Codex (OpenAI). Both run OpenAI's models; this is not a cross-family discussion.",
+    "note": "Relay started Codex (OpenAI) because the call named it. Its tool descriptions give your own subagents first place for Codex work, unless the user asked for relay or this session has none."
+  },
+  "discussion-openai-unknown": {
+    "caller": "openai",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that Codex (OpenAI) and Codex (family unknown) are of different families, so this discussion is not known to be cross-family.",
+    "note": "Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "discussion-unknown-anthropic": {
+    "caller": "unknown",
+    "launched": "anthropic",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Claude (Anthropic) are of different families, so this discussion is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\")."
+  },
+  "discussion-unknown-openai": {
+    "caller": "unknown",
+    "launched": "openai",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Codex (OpenAI) are of different families, so this discussion is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\")."
+  },
+  "discussion-unknown-unknown": {
+    "caller": "unknown",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Codex (family unknown) are of different families, so this discussion is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\"). Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "review-anthropic-anthropic": {
+    "caller": "anthropic",
+    "launched": "anthropic",
+    "relation": "same-family",
+    "summary": "Same-family: Claude (Anthropic) working with Claude (Anthropic). Both run Anthropic's models; this is not a cross-family review.",
+    "note": "Relay started Claude (Anthropic) because the call named it. Its tool descriptions give your own subagents first place for Claude work, unless the user asked for relay or this session has none."
+  },
+  "review-anthropic-openai": {
+    "caller": "anthropic",
+    "launched": "openai",
+    "relation": "cross-family",
+    "summary": "Cross-family: Claude (Anthropic) working with Codex (OpenAI)."
+  },
+  "review-anthropic-unknown": {
+    "caller": "anthropic",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that Claude (Anthropic) and Codex (family unknown) are of different families, so this review is not known to be cross-family.",
+    "note": "Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "review-openai-anthropic": {
+    "caller": "openai",
+    "launched": "anthropic",
+    "relation": "cross-family",
+    "summary": "Cross-family: Codex (OpenAI) working with Claude (Anthropic)."
+  },
+  "review-openai-openai": {
+    "caller": "openai",
+    "launched": "openai",
+    "relation": "same-family",
+    "summary": "Same-family: Codex (OpenAI) working with Codex (OpenAI). Both run OpenAI's models; this is not a cross-family review.",
+    "note": "Relay started Codex (OpenAI) because the call named it. Its tool descriptions give your own subagents first place for Codex work, unless the user asked for relay or this session has none."
+  },
+  "review-openai-unknown": {
+    "caller": "openai",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that Codex (OpenAI) and Codex (family unknown) are of different families, so this review is not known to be cross-family.",
+    "note": "Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  },
+  "review-unknown-anthropic": {
+    "caller": "unknown",
+    "launched": "anthropic",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Claude (Anthropic) are of different families, so this review is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\")."
+  },
+  "review-unknown-openai": {
+    "caller": "unknown",
+    "launched": "openai",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Codex (OpenAI) are of different families, so this review is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\")."
+  },
+  "review-unknown-unknown": {
+    "caller": "unknown",
+    "launched": "unknown",
+    "relation": "unknown",
+    "summary": "Family unknown: relay cannot show that a session of unknown family and Codex (family unknown) are of different families, so this review is not known to be cross-family.",
+    "note": "Relay cannot tell this session's family: its host is not one relay knows (client name \"opencode\"). Relay launched Codex with an endpoint its config does not judge (codex_endpoint_override \"accept\")."
+  }
+}

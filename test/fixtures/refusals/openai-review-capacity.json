@@ -1,0 +1,24 @@
+[
+  {
+    "method": "error",
+    "params": {
+      "error": {
+        "message": "Selected model is at capacity. Please try a different model.",
+        "codexErrorInfo": "serverOverloaded"
+      },
+      "willRetry": false
+    }
+  },
+  {
+    "method": "turn/completed",
+    "params": {
+      "turn": {
+        "status": "failed",
+        "error": {
+          "message": "Selected model is at capacity. Please try a different model.",
+          "codexErrorInfo": "serverOverloaded"
+        }
+      }
+    }
+  }
+]

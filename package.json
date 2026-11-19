@@ -1,0 +1,84 @@
+{
+  "name": "@jbkjr/relay",
+  "version": "1.2.1",
+  "description": "Lets coding agents of different model families (Claude Code, OpenAI Codex CLI) call each other: delegate, consult, discuss and review across families, over one MCP server",
+  "license": "MIT",
+  "author": "Jack Koch",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jbkjr/relay-mcp.git"
+  },
+  "homepage": "https://github.com/jbkjr/relay-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/jbkjr/relay-mcp/issues"
+  },
+  "type": "module",
+  "bin": {
+    "relay": "dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "npm-shrinkwrap.json",
+    "codex-pin.json",
+    "bin/",
+    "adapters/",
+    "scripts/codex-qualify/",
+    "test/codex-permissions.test.ts",
+    "test/mediated-network.test.ts",
+    "test/mediated-proxy.test.ts",
+    "test/never-policy.test.ts",
+    "test/never-tools.test.ts",
+    "test/proxy.test.ts",
+    "test/restart-overlay.test.ts",
+    "test/restart-overlay-live.test.ts",
+    "test/restart-overlay-profile.test.ts",
+    "test/stable-surfaces.test.ts",
+    "test/stage2-escalation.test.ts",
+    "test/stage2-escalation-live.test.ts",
+    "test/stage2-escalation-qualification.test.ts",
+    "test/stage2-executor.test.ts",
+    "test/stage2-grant.test.ts",
+    "test/stage2-native-live.test.ts",
+    "test/stage2-network-decisions.test.ts",
+    "test/stage2-probe.test.ts",
+    "test/stage2-standing-live.test.ts",
+    "test/wp4-adapters.test.ts",
+    "test/wp4-interlock.test.ts",
+    "test/helpers.ts",
+    "test/host-env.ts",
+    "test/keychain-decoy.ts",
+    "test/live-scope.ts",
+    "test/native-temp-alias.ts",
+    "test/process-home.ts",
+    "test/temp-root.ts",
+    "test/fixtures/",
+    "test/stubs/",
+    "experiments/stage2-redteam/lib/oracles.mjs",
+    "experiments/stage2-redteam/lib/report.mjs",
+    "docs/pinned-codex.md",
+    "docs/UPGRADING.md",
+    "LICENSES/",
+    "SECURITY.md"
+  ],
+  "engines": {
+    "node": ">=24.15"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/cli.js && node scripts/build-sbcheck.mjs && node scripts/stamp-build.mjs",
+    "test": "npm run build && node --test --test-timeout=600000 --test-concurrency=8 test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "node scripts/check-pack.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "smol-toml": "1.9.1",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

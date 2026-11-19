@@ -1,0 +1,13 @@
+{
+  "name": "relay-local",
+  "owner": {
+    "name": "relay"
+  },
+  "plugins": [
+    {
+      "name": "relay",
+      "source": "./relay",
+      "description": "Reach coding agents of other families (Codex from Claude Code, Claude from Codex) through the relay MCP server: delegate, consult, discuss, review."
+    }
+  ]
+}

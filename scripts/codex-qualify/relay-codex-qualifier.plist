@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>__LABEL__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE_ABSOLUTE_PATH__</string>
+    <string>__RUNNER_ABSOLUTE_PATH__</string>
+    <string>__CONFIG_ABSOLUTE_PATH__</string>
+    <string>--run</string>
+  </array>
+  <key>WorkingDirectory</key><string>__REPO_ABSOLUTE_PATH__</string>
+  <key>LimitLoadToSessionType</key><string>Aqua</string>
+  <!-- Standard, not Background: Background clamps the run and every descendant to the background
+       QoS band (priority 4, efficiency cores, throttled I/O). On a laptop with two efficiency
+       cores and a busy desktop, the watchdog's ps then took 5-30 s and failed qualifications. -->
+  <key>ProcessType</key><string>Standard</string>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>2</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Hour</key><integer>14</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Hour</key><integer>18</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Hour</key><integer>22</integer><key>Minute</key><integer>15</integer></dict>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><false/>
+  <key>ExitTimeOut</key><integer>120</integer>
+  <key>Umask</key><integer>63</integer>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>__NODE_BIN_DIRECTORY__:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string></dict>
+  <key>StandardOutPath</key><string>__LOG_DIRECTORY__/stdout.log</string>
+  <key>StandardErrorPath</key><string>__LOG_DIRECTORY__/stderr.log</string>
+</dict>
+</plist>

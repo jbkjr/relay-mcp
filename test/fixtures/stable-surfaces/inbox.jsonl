@@ -1,0 +1,2 @@
+{"type":"auth","token":"fixture-token"}
+{"type":"user","message":{"role":"user","content":"relay (event 1, tag <notice-tag>): Sent by the local relay server, not by a Claude session or by the Codex agent (OpenAI) of job j_00000001. Verify first with status notice={\"event_id\":1,\"tag\":\"<notice-tag>\"}. Pointer: job j_00000001 finished (done). Call result j_00000001."}}

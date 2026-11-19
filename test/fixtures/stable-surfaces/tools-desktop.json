@@ -1,0 +1,575 @@
+{
+  "adopt": {
+    "type": "object",
+    "properties": {
+      "run_id": {
+        "type": "string"
+      },
+      "into_session": {
+        "type": "string"
+      },
+      "in_directory": {
+        "type": "string"
+      },
+      "item_count": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "run_id",
+      "into_session"
+    ]
+  },
+  "approve": {
+    "type": "object",
+    "properties": {
+      "request_id": {
+        "type": "string"
+      },
+      "decision": {
+        "type": "string",
+        "enum": [
+          "allow",
+          "deny"
+        ]
+      },
+      "note": {
+        "type": "string"
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "once",
+          "job"
+        ]
+      },
+      "user_confirmed": {
+        "type": "boolean"
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "request_id",
+      "decision"
+    ]
+  },
+  "ask": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      },
+      "message": {
+        "type": "string"
+      },
+      "thread_id": {
+        "type": "string"
+      },
+      "context": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "allow_delegation": {
+        "type": "boolean"
+      },
+      "model": {
+        "type": "string"
+      },
+      "effort": {
+        "type": "string"
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "boolean"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          }
+        }
+      },
+      "request_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "extensions": {
+        "type": "boolean"
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "message"
+    ]
+  },
+  "brief": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      }
+    }
+  },
+  "cancel": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "confirm": {
+    "type": "object",
+    "properties": {
+      "request_id": {
+        "type": "string"
+      },
+      "from": {
+        "type": "string"
+      },
+      "wants": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "effect": {
+        "type": "string"
+      },
+      "in_directory": {
+        "type": "string"
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "once",
+          "job"
+        ]
+      },
+      "note": {
+        "type": "string"
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "request_id",
+      "from",
+      "wants",
+      "kind",
+      "effect",
+      "in_directory"
+    ]
+  },
+  "delegate": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      },
+      "task": {
+        "type": "string"
+      },
+      "scope": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "read",
+          "write"
+        ]
+      },
+      "allow_delegation": {
+        "type": "boolean"
+      },
+      "model": {
+        "type": "string"
+      },
+      "effort": {
+        "type": "string"
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "background": {
+        "type": "boolean"
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "boolean"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          },
+          "write_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "raw_network": {
+            "type": "boolean"
+          },
+          "local_network": {
+            "type": "boolean"
+          }
+        }
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "request_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "extensions": {
+        "type": "boolean"
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "task",
+      "mode"
+    ]
+  },
+  "discuss": {
+    "type": "object",
+    "properties": {
+      "message": {
+        "type": "string"
+      },
+      "topic": {
+        "type": "string"
+      },
+      "discussion_id": {
+        "type": "string"
+      },
+      "target": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      },
+      "with": {
+        "type": "string"
+      },
+      "context": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "role": {
+        "type": "string"
+      },
+      "max_turns": {
+        "type": "integer",
+        "minimum": 2,
+        "maximum": 9007199254740991
+      },
+      "allow_delegation": {
+        "type": "boolean"
+      },
+      "model": {
+        "type": "string"
+      },
+      "effort": {
+        "type": "string"
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "boolean"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          }
+        }
+      },
+      "request_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "message"
+    ]
+  },
+  "merge": {
+    "type": "object",
+    "properties": {
+      "job_id": {
+        "type": "string"
+      },
+      "continue": {
+        "type": "boolean"
+      },
+      "include_changes_since_result": {
+        "type": "boolean"
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "job_id"
+    ]
+  },
+  "result": {
+    "type": "object",
+    "properties": {
+      "job_id": {
+        "type": "string"
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "job_id"
+    ]
+  },
+  "resume": {
+    "type": "object",
+    "properties": {
+      "job_id": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "boolean"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          },
+          "write_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "raw_network": {
+            "type": "boolean"
+          },
+          "local_network": {
+            "type": "boolean"
+          }
+        }
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "session_token": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "job_id",
+      "message"
+    ]
+  },
+  "review": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string"
+      },
+      "plan": {
+        "type": "string"
+      },
+      "focus": {
+        "type": "string"
+      },
+      "reviewer": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      },
+      "review_id": {
+        "type": "string"
+      },
+      "own_review": {
+        "type": "string"
+      },
+      "skip_own": {
+        "type": "boolean"
+      },
+      "model": {
+        "type": "string"
+      },
+      "effort": {
+        "type": "string"
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "request_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "session_token": {
+        "type": "string"
+      }
+    }
+  },
+  "status": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "wait_s": {
+        "type": "number"
+      },
+      "notice": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "tag": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "event_id",
+          "tag"
+        ]
+      },
+      "session_token": {
+        "type": "string"
+      }
+    }
+  }
+}

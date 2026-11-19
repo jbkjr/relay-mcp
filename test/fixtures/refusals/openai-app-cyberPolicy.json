@@ -1,0 +1,24 @@
+[
+  {
+    "method": "error",
+    "params": {
+      "error": {
+        "message": "This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request. Otherwise, confirm that the access_programs.cyber parameter is set to the appropriate tier, and note that some cybersecurity requests are still limited, even when Daybreak is on.",
+        "codexErrorInfo": "cyberPolicy"
+      },
+      "willRetry": false
+    }
+  },
+  {
+    "method": "turn/completed",
+    "params": {
+      "turn": {
+        "status": "failed",
+        "error": {
+          "message": "This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request. Otherwise, confirm that the access_programs.cyber parameter is set to the appropriate tier, and note that some cybersecurity requests are still limited, even when Daybreak is on.",
+          "codexErrorInfo": "cyberPolicy"
+        }
+      }
+    }
+  }
+]

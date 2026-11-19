@@ -1,0 +1,23 @@
+{
+  "status": "refused",
+  "outcome": "refused",
+  "refusal": {
+    "vendor": "openai",
+    "message": "This content was flagged for possible cybersecurity risk. If this seems wrong, try rephrasing your request. Otherwise, confirm that the access_programs.cyber parameter is set to the appropriate tier, and note that some cybersecurity requests are still limited, even when Daybreak is on.",
+    "code": "cyberPolicy"
+  },
+  "verdict": "unknown",
+  "unfinished": true,
+  "note": "The codex family produced no completed review. Stopped by OpenAI's safety system. Relay neither retried nor rephrased the request, switched models, nor used a fallback target. A caller may explicitly resume the session. Your own review is preserved and stands alone.",
+  "sides": {
+    "claude": {
+      "verdict": "pass",
+      "declared_verdict": "pass",
+      "coverage": {
+        "complete": true
+      },
+      "items": 0
+    }
+  },
+  "consensus": []
+}

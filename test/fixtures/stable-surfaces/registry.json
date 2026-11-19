@@ -1,0 +1,49 @@
+{
+  "version": 4,
+  "tables": [
+    {
+      "name": "calls",
+      "sql": "CREATE TABLE calls (\n  scope TEXT NOT NULL, request_id TEXT NOT NULL, tool TEXT NOT NULL, args_hash TEXT NOT NULL,\n  node_id TEXT NOT NULL, turn_id INTEGER, claim TEXT NOT NULL, owner_pid INTEGER NOT NULL, owner_start TEXT,\n  created_at INTEGER NOT NULL, PRIMARY KEY (scope, request_id)\n)"
+    },
+    {
+      "name": "elicitations",
+      "sql": "CREATE TABLE elicitations (\n  request_id TEXT PRIMARY KEY, token TEXT NOT NULL, pid INTEGER NOT NULL, pid_start TEXT,\n  asked_at INTEGER NOT NULL, outcome TEXT, reading TEXT, ended_at INTEGER\n)"
+    },
+    {
+      "name": "events",
+      "sql": "CREATE TABLE events (\n  id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, key TEXT NOT NULL UNIQUE, kind TEXT NOT NULL,\n  item_id TEXT NOT NULL, subject TEXT NOT NULL, text TEXT NOT NULL, created_at INTEGER NOT NULL,\n  noticed_at INTEGER, seen_at INTEGER\n)"
+    },
+    {
+      "name": "injections",
+      "sql": "CREATE TABLE injections (\n  id INTEGER PRIMARY KEY AUTOINCREMENT, discussion_id TEXT NOT NULL, body TEXT NOT NULL,\n  created_at INTEGER NOT NULL\n)"
+    },
+    {
+      "name": "launch_leaders",
+      "sql": "CREATE TABLE launch_leaders (\n  run_id TEXT NOT NULL, leader_pid INTEGER NOT NULL, kind TEXT NOT NULL, node_id TEXT,\n  start TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, PRIMARY KEY (run_id, leader_pid, start)\n)"
+    },
+    {
+      "name": "nodes",
+      "sql": "CREATE TABLE nodes (\n  id TEXT PRIMARY KEY, run_id TEXT NOT NULL, parent_id TEXT, kind TEXT NOT NULL,\n  target TEXT, mode TEXT NOT NULL, depth INTEGER NOT NULL, allow_delegation INTEGER NOT NULL,\n  status TEXT NOT NULL, task TEXT NOT NULL, params_json TEXT, session_id TEXT,\n  cwd TEXT NOT NULL, repo TEXT, worktree TEXT, branch TEXT, base_sha TEXT, model TEXT, effort TEXT,\n  worker_pid INTEGER, worker_claimed_at INTEGER, agent_pid INTEGER, agent_pgid INTEGER,\n  log_path TEXT, transcript_path TEXT, result_json TEXT, error TEXT,\n  created_at INTEGER NOT NULL, started_at INTEGER, ended_at INTEGER\n, worker_start TEXT, agent_start TEXT, owner_id TEXT, head_sha TEXT)"
+    },
+    {
+      "name": "relay_procs",
+      "sql": "CREATE TABLE relay_procs (\n  pid INTEGER NOT NULL, start TEXT NOT NULL, kind TEXT NOT NULL, node_id TEXT, created_at INTEGER NOT NULL\n)"
+    },
+    {
+      "name": "requests",
+      "sql": "CREATE TABLE requests (\n  id TEXT PRIMARY KEY, run_id TEXT NOT NULL, node_id TEXT NOT NULL, kind TEXT NOT NULL,\n  summary TEXT NOT NULL, reason TEXT, detail_json TEXT, status TEXT NOT NULL,\n  decided_by TEXT, note TEXT, created_at INTEGER NOT NULL, decided_at INTEGER\n, scope TEXT, turn_id INTEGER)"
+    },
+    {
+      "name": "runs",
+      "sql": "CREATE TABLE runs (\n  id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, root_cwd TEXT NOT NULL,\n  config_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active'\n, root_pid INTEGER, root_start TEXT, root_token TEXT)"
+    },
+    {
+      "name": "slots",
+      "sql": "CREATE TABLE slots (\n  id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, holder TEXT NOT NULL,\n  pid INTEGER NOT NULL, state TEXT NOT NULL, created_at INTEGER NOT NULL\n)"
+    },
+    {
+      "name": "turns",
+      "sql": "CREATE TABLE turns (\n  id INTEGER PRIMARY KEY AUTOINCREMENT, node_id TEXT NOT NULL, source TEXT NOT NULL,\n  body TEXT NOT NULL, access TEXT NOT NULL, status TEXT NOT NULL, reply TEXT, error TEXT,\n  prompt_path TEXT, created_at INTEGER NOT NULL, started_at INTEGER, ended_at INTEGER\n, denials TEXT, activity TEXT, activity_at INTEGER, usage_json TEXT, tmp_dir TEXT, tmp_dev INTEGER, tmp_ino INTEGER, grant_json TEXT, refusal_json TEXT)"
+    }
+  ]
+}

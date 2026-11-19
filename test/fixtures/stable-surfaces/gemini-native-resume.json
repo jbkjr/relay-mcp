@@ -1,0 +1,4 @@
+{
+  "command": null,
+  "note": "Relay shows no command to open a Gemini session in your own gemini. Its session files are in relay's Gemini home for this item, which anything in its turns could write, read jobs included, and `gemini --resume` there would replay them outside relay's sandbox: with relay's Gemini settings rather than yours and whatever instructions the job left in its chats, with only Gemini's own approval prompts in between. The SANDBOX=sandbox-exec needed to find those sessions starts no sandbox, though Gemini would tell its model it runs under Seatbelt. Continue it with relay's resume, which runs it inside relay's sandbox."
+}

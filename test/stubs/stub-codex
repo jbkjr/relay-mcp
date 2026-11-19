@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+import { main } from "./stub-agent.mjs";
+import codex from "./targets/codex.mjs";
+await main(codex);

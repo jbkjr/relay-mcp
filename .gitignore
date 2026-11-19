@@ -1,0 +1,7 @@
+node_modules
+experiments/redteam/records/
+experiments/redteam/logs/
+dist/
+.relay/
+# A release's shipped Codex pin: written by scripts/codex-qualify/codex-shipped-pin.mjs for one build, never committed.
+/codex-pin.json

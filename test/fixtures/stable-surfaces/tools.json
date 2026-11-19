@@ -1,0 +1,716 @@
+{
+  "adopt": {
+    "type": "object",
+    "properties": {
+      "run_id": {
+        "type": "string"
+      },
+      "into_session": {
+        "type": "string"
+      },
+      "in_directory": {
+        "type": "string"
+      },
+      "item_count": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "run_id",
+      "into_session"
+    ]
+  },
+  "approve": {
+    "type": "object",
+    "properties": {
+      "request_id": {
+        "type": "string"
+      },
+      "decision": {
+        "type": "string",
+        "enum": [
+          "allow",
+          "deny"
+        ]
+      },
+      "note": {
+        "type": "string"
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "once",
+          "job"
+        ]
+      },
+      "user_confirmed": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "request_id",
+      "decision"
+    ]
+  },
+  "ask": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      },
+      "message": {
+        "type": "string"
+      },
+      "thread_id": {
+        "type": "string"
+      },
+      "context": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "allow_delegation": {
+        "type": "boolean"
+      },
+      "model": {
+        "type": "string"
+      },
+      "effort": {
+        "type": "string"
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "boolean"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          }
+        }
+      },
+      "request_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "extensions": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "message"
+    ]
+  },
+  "brief": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      }
+    }
+  },
+  "cancel": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "confirm": {
+    "type": "object",
+    "properties": {
+      "request_id": {
+        "type": "string"
+      },
+      "from": {
+        "type": "string"
+      },
+      "wants": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "effect": {
+        "type": "string"
+      },
+      "in_directory": {
+        "type": "string"
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "once",
+          "job"
+        ]
+      },
+      "note": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "request_id",
+      "from",
+      "wants",
+      "kind",
+      "effect",
+      "in_directory"
+    ]
+  },
+  "delegate": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      },
+      "task": {
+        "type": "string"
+      },
+      "scope": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "read",
+          "write"
+        ]
+      },
+      "allow_delegation": {
+        "type": "boolean"
+      },
+      "model": {
+        "type": "string"
+      },
+      "effort": {
+        "type": "string"
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "background": {
+        "type": "boolean"
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "boolean"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          },
+          "write_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "raw_network": {
+            "type": "boolean"
+          },
+          "local_network": {
+            "type": "boolean"
+          }
+        }
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "request_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "extensions": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "task",
+      "mode"
+    ]
+  },
+  "discuss": {
+    "type": "object",
+    "properties": {
+      "message": {
+        "type": "string"
+      },
+      "topic": {
+        "type": "string"
+      },
+      "discussion_id": {
+        "type": "string"
+      },
+      "target": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      },
+      "with": {
+        "type": "string"
+      },
+      "context": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "role": {
+        "type": "string"
+      },
+      "max_turns": {
+        "type": "integer",
+        "minimum": 2,
+        "maximum": 9007199254740991
+      },
+      "allow_delegation": {
+        "type": "boolean"
+      },
+      "model": {
+        "type": "string"
+      },
+      "effort": {
+        "type": "string"
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "boolean"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          }
+        }
+      },
+      "request_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    "required": [
+      "message"
+    ]
+  },
+  "escalate": {
+    "type": "object",
+    "properties": {
+      "capabilities": {
+        "minItems": 1,
+        "maxItems": 32,
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "localhost"
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                "operation": {
+                  "type": "string",
+                  "enum": [
+                    "connect",
+                    "listen"
+                  ]
+                },
+                "host": {
+                  "default": "127.0.0.1",
+                  "type": "string",
+                  "enum": [
+                    "127.0.0.1",
+                    "::1"
+                  ]
+                },
+                "api_effects": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                }
+              },
+              "required": [
+                "kind",
+                "port",
+                "operation",
+                "api_effects"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "port0"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "write_root"
+                },
+                "root": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "change_to_write": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "required": [
+                "kind",
+                "root"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "network"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "mediated",
+                    "raw",
+                    "local"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "mode"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "reason": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 65536
+      },
+      "continuation": {
+        "type": "object",
+        "properties": {
+          "argv": {
+            "minItems": 1,
+            "maxItems": 4096,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            }
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "cwd": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "work": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "capabilities",
+      "reason",
+      "continuation"
+    ],
+    "additionalProperties": false
+  },
+  "merge": {
+    "type": "object",
+    "properties": {
+      "job_id": {
+        "type": "string"
+      },
+      "continue": {
+        "type": "boolean"
+      },
+      "include_changes_since_result": {
+        "type": "boolean"
+      },
+      "cwd": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "job_id"
+    ]
+  },
+  "permission_prompt": {
+    "type": "object",
+    "properties": {
+      "tool_name": {
+        "type": "string"
+      },
+      "input": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {}
+      },
+      "tool_use_id": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "tool_name",
+      "input"
+    ]
+  },
+  "result": {
+    "type": "object",
+    "properties": {
+      "job_id": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "job_id"
+    ]
+  },
+  "resume": {
+    "type": "object",
+    "properties": {
+      "job_id": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "grant": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "boolean"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          },
+          "write_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "raw_network": {
+            "type": "boolean"
+          },
+          "local_network": {
+            "type": "boolean"
+          }
+        }
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      }
+    },
+    "required": [
+      "job_id",
+      "message"
+    ]
+  },
+  "review": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string"
+      },
+      "plan": {
+        "type": "string"
+      },
+      "focus": {
+        "type": "string"
+      },
+      "reviewer": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "copilot",
+          "gemini",
+          "grok"
+        ]
+      },
+      "review_id": {
+        "type": "string"
+      },
+      "own_review": {
+        "type": "string"
+      },
+      "skip_own": {
+        "type": "boolean"
+      },
+      "model": {
+        "type": "string"
+      },
+      "effort": {
+        "type": "string"
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "speed": {
+        "type": "string",
+        "enum": [
+          "standard",
+          "fast",
+          "ultrafast"
+        ]
+      },
+      "request_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    }
+  },
+  "status": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "wait_s": {
+        "type": "number"
+      },
+      "notice": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "tag": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "event_id",
+          "tag"
+        ]
+      }
+    }
+  }
+}
