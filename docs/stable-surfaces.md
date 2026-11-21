@@ -13,7 +13,7 @@ parameter names, JSON types, enums, nested schemas and required lists are checke
 [tools.json](../test/fixtures/stable-surfaces/tools.json). The registered names are:
 
 `adopt`, `approve`, `ask`, `brief`, `cancel`, `confirm`, `delegate`, `discuss`, `merge`,
-`permission_prompt`, `result`, `resume`, `review`, `status`.
+`permission_prompt`, `result`, `resume`, `review`, `room`, `status`.
 
 The schema fixture is part of this document: optional parameters remain optional and
 required parameters remain required. Host qualification controls visibility: `confirm`
@@ -80,6 +80,121 @@ again when a resume changes its `network`, `raw_network` or `write_paths`. Root 
 missing qualified person path, or escalation off, refuses before launch. A denial refuses the turn.
 Launched agents cannot grant it. Jobs' `grant` views show it when set.
 
+## Rooms (1.3.0)
+
+The root-only `room` tool exchanges information between two existing root sessions; it
+creates no run or item. [room-types.ts](../src/core/room-types.ts) defines the contract;
+[rooms.ts](../src/core/rooms.ts) implements it. The flat schema rejects unknown fields;
+actions also reject missing or irrelevant fields:
+
+| Action | Required input | Optional input | Added result fields |
+|---|---|---|---|
+| `open` | none | `purpose` (one line, ≤200 code points) | `opened: true`, `clipboard` (waiting view) |
+| `join` | `invite` | none | `joined: true`, `repeated` |
+| `send` | `cursor`, `text`, `stance`, `request_id` | none | `accepted_seq`, `repeated` |
+| `wait` | `cursor` | `wait_s` (0–21600; default 45; above 50 only where the host backgrounds long calls) | `wait_ended` |
+| `transcript` | `cursor` | none | none |
+| `close` | `cursor` | none | ended view |
+
+Shared desktop calls also carry their existing `session_token`. There is no room key or
+room-id input. A one-use invite expires after ten minutes and binds one seat to the existing
+owner, hashed with the `relay-room-owner-v1` domain. A room's `expires_at` is absolute, 24 hours
+after creation. While it is `waiting`, its effective deadline is earlier: the room ends with reason
+`expired` when the earliest unspent invite of a seat it waits for lapses, including the one a
+re-seat issues, ten minutes after that invite was issued. A room waiting only because a seat's
+server exited has no unspent invite, and keeps the 24-hour deadline until a re-seat issues one. Dedicated owners belong to the relay
+server process; a restart needs terminal re-seating. Shared owners retain the seat with the
+same session token, relay home, key file and registry. Re-seating revokes the previous owner
+and invites immediately, preserving the transcript and turn budget. It transfers no runs.
+
+`open` asks the person, through the host's own elicitation dialog, to open a room. It is offered
+only where relay knows that dialog reaches the person: interactive Claude Code in a terminal
+and the Codex CLI, with relay's dialogs enabled (`ask_user` not `never`). Only an accept of
+exactly `{decision:"open the room"}` opens one; the caller then holds member-1, and relay has
+written member-2's prompt, with its one-use invite, to the person's clipboard (macOS,
+`/usr/bin/pbcopy`). The caller never receives the invite: `clipboard` is one line saying where
+the prompt is and until when its invite is valid. A failed clipboard write opens nothing
+(`open_clipboard`). An optional `purpose`, the model's own words, must be one line of at most 200
+code points without invite or token shapes (`purpose` refusal otherwise, before any question); it
+is sanitized as room text and shown only labelled "Purpose (written by the model, unverified):".
+Room text (messages, terminal lines and the purpose) has recognized credentials replaced with
+`[redacted]` before it is stored; invite and session-token shapes refuse it instead.
+`ask_user:"never"` withholds `open` on every host. The question has no deadline of relay's own. Everything else refuses with
+`{refused:true,reason}` and creates no room, seat or invite (the opportunistic expiry sweep that
+every room call runs may still end other expired rooms): no qualified prompt, ineligibility, extra fields,
+a seat in a waiting or open room, a room question from the same conversation already open, the
+home's creation limits, and a declined, closed, host-ended or unattributable answer, or host or caller evidence that no longer qualifies when rechecked
+inside the creating transaction. No other tool's arguments may contain an invite.
+
+Where `open` would be offered, `join` first asks the person in the same dialog ("Join this
+room?", `do not join` / `join the room`), naming the seat and the other seat's recorded holder.
+Only the exact yes seats the caller; any other answer refuses with a `join_*` reason, seats
+nothing and leaves the invite unspent. Unusable invites are unavailable without a question, and
+a replay of one's own join is not asked again. Elsewhere join is unchanged. On macOS the
+clipboard flow below reports a clear only once it is verified, and otherwise asks the person
+to replace the clipboard.
+
+[room.json](../test/fixtures/stable-surfaces/room.json) pins actual protocol results with
+fixed placeholder ids, invites and times. Every member view includes `room_id`, `origin`
+(`terminal`, `open`, or `unknown` for rooms an earlier build wrote), `member_id`,
+`state`, `next`, `turns`, `max_turns`, `revision`, `cursor`, `through_seq`, `latest_seq`,
+`remaining`, `peer`, `poll`, `messages`, the fixed `note`, and `user_confirmed_ignored`.
+`state` is `waiting`, `open` or `ended`; `next` is a member id only when open. Waiting views
+contain no messages. `peer` has `member_id`, `seat` (`joined` or `unseated`) and nullable UTC
+`last_call_at` and `process` (`alive`, `gone` or `unknown`: whether relay can see the peer seat's
+relay server); `poll` has nullable `peer_idle_s`, `stop_after_s` (7200 where the peer's process is
+unknown, otherwise null) and `stopped`.
+
+A message has `seq`, UTC `at`, `text`, `sender` and `stance`. Member senders have `member_id`,
+`label`, nullable `host`/`client` and `family`; stance is `continue`, `agree` or `crux`.
+Terminal senders have `{member_id:null,label:"terminal",host:"terminal",client:null,family:"unknown"}`
+and null stance. These fields attribute text; they do not authenticate the person.
+
+The caller supplies the highest sequence it has read, a safe integer from zero through
+`latest_seq`. Reads do not consume rows. Ordinary views skip this owner's rows; `transcript`
+includes them. Each page returns at most one row. Advance to `through_seq` after reading it,
+and page while `remaining` is nonzero. The cursor never advances past an omitted external
+row; retrying an old cursor can repeat text. A stale send returns unread rows without sending.
+A UUID `request_id` makes an exact send retry return its `accepted_seq` with `repeated:true`;
+changed text or stance refuses. This asserts reading order, not model comprehension.
+
+Sends alternate from member-1. Two consecutive acknowledged `agree` messages end in
+`{outcome:"agree",reason:"agreement",conclusion_seq:<later seq>,closed_by:null}`.
+Other endings have `outcome:"no_agreement"`, null `conclusion_seq`, and reason `crux`,
+`turn_limit`, `closed` or `expired`. `closed_by` is the closing member id, `"terminal"`, or
+null for automatic endings. Every ended view has `next:null` and `ending`; an existing ending
+is immutable. A terminal line interrupts a pending agreement pair.
+
+`wait` returns unread text or an ending before checking peer idleness. Otherwise it waits
+for a room revision change (join, re-seat, message, terminal line or ending), never a bare
+peer call. An elapsed wait has `wait_ended:true`; immediate unread/ended results have false.
+Cancellation can return false too. Waits obey host/config/deadline/expiry and peer-idle caps.
+Quiet alone never stops waits: empty waits are refused once the peer's conversation is gone
+(its relay server has exited), or, only where relay cannot see that process, after 7200 seconds
+without a peer call, until the peer calls again. A wait in progress ends when the peer's server
+exits. In interactive Claude Code (its long calls move to the background) one wait may last up to
+21600 seconds; elsewhere 50.
+Nothing wakes an idle conversation. Eligibility and host limits are documented in
+[Rooms](usage.md#rooms).
+
+Failures are `{refused:true,reason}` for ineligibility, arguments or text; state, turn,
+stale-cursor, idle-peer, changed-retry, rate/capacity and duplicate-wait refusals can also
+carry a view. Never treat such a view as an accepted send. Unknown, expired or revoked invites and foreign or absent bindings use the same
+unavailable envelope:
+`{error:"Room unavailable.",recovery:"Use this conversation's existing session token if required, or ask the person for a fresh terminal-issued invite. A room id gives no access."}`.
+A still-bound owner can read an ended room. Refusal categories and result fields are stable;
+exact refusal prose, numeric budgets, host qualification and terminal rendering can tighten.
+The fixture's prose changes require review, like other diagnostic snapshots.
+
+Before returning another owner's or terminal text, relay durably marks the recipient owner
+in `room_exposures`. Its views then report `user_confirmed_ignored:true`. That owner's
+`approve(...,user_confirmed:true)` no longer bypasses a pending request's `asking` or
+`dismissed` person-question state and no longer gets the claimed-confirmation audit label.
+Denials, ordinary root judgments otherwise allowed, grants, and qualified dialog/`confirm`/
+terminal paths keep their existing rules. This is not a session-wide approval or grant ban,
+nor a guarantee against lobbying. Exposure survives restart and transcript deletion for the
+same owner; it does not follow text pasted to another owner or across separate relay entries.
+
 ## Configuration
 
 [src/core/config.ts](../src/core/config.ts), `ConfigSchema`, strictly validates files;
@@ -94,10 +209,10 @@ machine, not the synced config; see [extensions](extensions.md).
 Release A adds strict `never` arrays `paths`, `ports`, `hosts`, `override_builtin`;
 empty/omitted arrays remove nothing. Eligible overrides require an exact ID,
 `REMOVE BUILT-IN NEVER <id>` acknowledgment and nonempty reason. Config/install/authority
-entries remain non-removable. The registry remains at schema 4, with the cumulative
-floor in the run's private `params_json` inside its existing JSON envelope, excluded
+entries remain non-removable. Release A kept schema 4; rooms raise it to 5. The cumulative
+floor is in the run's private `params_json` inside its existing JSON envelope, excluded
 from effective config. Request/node views may add `never_policy` hash/version/removals.
-The config fixture records the public additions; the registry fixture is unchanged.
+The config fixture records the public additions; schema 5 is recorded separately below.
 
 `child_env` and `targets.<id>.child_env` are strict objects with `policy`, `pass`,
 `drop` and `request`. `policy` is `allowlist` (root default) or `legacy`; the target
@@ -158,12 +273,12 @@ remain accepted. These aliases are not deprecated.
 
 ## Registry and migration
 
-[src/core/db.ts](../src/core/db.ts) records **schema version 4** in `PRAGMA user_version`.
+[src/core/db.ts](../src/core/db.ts) records **schema version 5** in `PRAGMA user_version`.
 0.2.0 registries have version 0; 0.9.x registries have version 1; earlier 1.0 builds have
-version 2; 1.0 through 1.0.3 have version 3. Opening any older registry with this build
+version 2; 1.0 through 1.0.3 have version 3; 1.0.4 through 1.2.2 have version 4. Opening any older registry with this build
 first makes a consistent `VACUUM INTO` backup beside the registry named
 `relay.db.backup-v<old>-<ISO time with colons/dots replaced>-<pid>`, adds missing tables and
-columns, then records version 4. A backup failure stops the upgrade before migration;
+columns, then records version 5. A backup failure stops the upgrade before migration;
 a registry from a newer schema is refused. Concurrent migration is retried under SQLite
 locking. New registries need no backup. [registry.json](../test/fixtures/stable-surfaces/registry.json)
 pins the current version and table layouts; [upgrade tests](../test/upgrade.test.ts) exercise
@@ -174,10 +289,10 @@ temporary-directory path, and `tmp_dev INTEGER` / `tmp_ino INTEGER`, its device 
 Relay records them before launching a confined turn; cleanup requires the same identity,
 a settled turn and no remaining recorded live processes. Old turns keep all three `NULL`;
 their directories cannot be inferred safely from existing records and remain unswept.
-A schema-1 registry receives the schema-2, schema-3 and schema-4 additions in one open: its
-`user_version` advances directly from 1 to 4 with exactly one pre-migration schema-1
-backup, and every existing row is preserved. These additions change neither the MCP
-tool schemas nor the config schema; their fixtures remain unchanged. Schema 3 also adds
+A schema-1 registry receives the schema-2 through schema-5 additions in one open: its
+`user_version` advances directly from 1 to 5 with exactly one pre-migration schema-1
+backup, and every existing row is preserved. The schema-3 temporary-directory additions
+change neither the MCP tool schemas nor the config schema. Schema 3 also adds
 nullable `turns.refusal_json TEXT` for the terminal status `refused`; old turns retain NULL
 and their original statuses.
 
@@ -198,6 +313,22 @@ version receives it in the same single open with one pre-migration backup. A sch
 (1.0.3 and before) refuses the version-4 file, so keep the backup for rollback. A version-4
 file from a pre-release build of 1.0.4, keyed without `start`, is rebuilt in place under the
 current key on first open, every row kept.
+
+Schema 5 (1.3.0) adds six tables: `rooms` (state, revision, lifetime, turn budget, ending, and
+`origin` with an opener's sanitized `purpose`),
+`room_members` (ordinal seats, owner generations, presence, wait leases and rate history),
+`room_bindings` (one current/latest-ended lookup per owner), `room_invites` (hashed one-use
+invite verifiers), `room_messages` (ordered text, sender, stance and retry hash), and
+`room_exposures` (owner hashes and first text-exposure times). No raw invite or token is stored.
+Room ids are outside the item namespace; the binding, never an id, authorizes member access.
+Room calls expire rooms but never delete rows. `relay clean` and daily housekeeping delete
+ended rooms after `keep_records_days` from `ended_at`; null keeps them indefinitely.
+Exposure hashes remain. Rebuild/WAL cleanup can be deferred during room operations or waits;
+backups and host histories are outside deletion guarantees.
+
+Schema 5 is not rolling-compatible. Stop every dedicated/shared server and worker before
+migration, then restart all on the new build. Older binaries refuse schema 5 on opening,
+but cached connections do not reliably recheck it. See the [1.3.0 procedure](UPGRADING.md#upgrading-to-130-stop-every-relay-server-first).
 
 The migration promise is forward reading of released registries, not a fixed SQL schema
 or permission for an older binary to open a newer registry. Direct table queries in the
@@ -299,13 +430,28 @@ configuration; invisible overrides and runtime changes can differ.
 ## CLI
 
 [src/cli.ts](../src/cli.ts) and [usage.txt](../test/fixtures/stable-surfaces/usage.txt)
-pin `mcp`, `bridge`, `tree`, `chat`, `approvals`, `adopt`, `approve`, `deny`, `cancel`,
+pin `mcp`, `bridge`, `tree`, `chat`, `room`, `approvals`, `adopt`, `approve`, `deny`, `cancel`,
 `clean`, `install`, `uninstall`, `doctor`, `qualify-codex`, `--version` and their documented flags
 (`clean --forget <run_id> [--write]` new in 1.0; `qualify-codex [--version X.Y.Z] [--force]` new in 1.2.1).
 `worker` is an internal process entry point, not a supported script interface. So is
 `gemini-tools <dir> --list|<tool>` (new in 1.0), the helper behind a confined Gemini agent's own
 tool discovery, which runs it through its own entry point ([gemini.md](gemini.md) §3.8): its
 arguments, files and output are between relay and that harness.
+
+`relay room list` entries, the transcript header and the seat review carry each room's
+origin. `relay room new` prints two invitation prompts and a JSON summary, last; on macOS it first
+offers the prompts on the clipboard one at a time (Enter to copy, Enter to replace, Enter to
+clear; `n` skips) and clears the clipboard of their invites on every way out, Ctrl-C included.
+Re-seating offers its one prompt the same way. `relay room list`
+returns JSON inventory without credentials or transcript text. `relay room <id> --print`
+prints the full transcript. `relay room <id>` follows it and adds typed terminal lines;
+`--say <text>` adds one line. `--reseat member-1|member-2` and `--close` show both seats
+and require the exact printed confirmation. Every writing path requires TTY input/output,
+checks known host-shell and launched-agent markers and launch ancestry before lookup.
+List/print are read-only and allowed noninteractively. These checks are best effort against
+local processes. JSON failures have `error` or `refused` and exit 1; malformed usage exits 2.
+The command/flag grammar and JSON fields are stable; prompt wording, confirmations and
+human transcript layout are reviewed snapshots, not a script parsing interface.
 
 Workers hold the root's secret values for redaction only. The owning root's broker
 sends the values derived by `secretValues` from its captured environment separately

@@ -3,9 +3,13 @@
 // from host experiments (experiments/answers.md); a host relay has not positively identified gets
 // the cautious answer.
 
+import { spawnSync } from "node:child_process";
 import { hostSession } from "../backends/env.js";
-import type { Consent } from "../core/claude-settings.js";
-import { ancestorCommandLinesLater } from "../core/procs.js";
+import { managedSettingsPaths, settingsArguments, settingsFiles, type Consent } from "../core/claude-settings.js";
+import type { Instance } from "../core/caller.js";
+import { launchMarker, launchedTree } from "../core/presence.js";
+import { ancestorCommandLines, ancestorCommandLinesLater } from "../core/procs.js";
+import { ROOM_REFUSALS, type RoomEligibility, type RoomIdentityEvidence } from "../core/room-types.js";
 import { TARGETS, targetDef, type Target, type Vendor } from "../targets/index.js";
 
 /**
@@ -219,6 +223,108 @@ const desktopApp = (env: NodeJS.ProcessEnv): boolean => Boolean(env.CLAUDE_CODE_
  */
 export const canBypassPrompts = (commandLines: readonly string[]): boolean =>
   commandLines.some((line) => /(^|\s)--(allow-)?dangerously-skip-permissions(=\S*)?(\s|$)/.test(line) || /(^|\s)--permission-mode(=|\s+)bypassPermissions(\s|$)/.test(line));
+
+/** Only per-conversation command-line overrides are evidence; global Codex config is not. */
+const codexBypassesPrompts = (commandLines: readonly string[]): boolean => commandLines.some((line) =>
+  /(^|\s)--dangerously-bypass-approvals-and-sandbox(\s|$)/.test(line)
+  || /(^|\s)(--ask-for-approval|-a)(=|\s+)never(\s|$)/.test(line)
+  || /(^|\s)(--sandbox|-s)(=|\s+)danger-full-access(\s|$)/.test(line)
+  || /(^|\s)(--config|-c)(=|\s+)["']?(approval_policy\s*=\s*["']?never|sandbox_mode\s*=\s*["']?danger-full-access)["']*(\s|$)/.test(line));
+
+/** Rooms need only positive bypass evidence, not qualification of confirm or dialog hooks. */
+function roomBypassSettings(env: NodeJS.ProcessEnv, cwd: string, commandLines: readonly string[]): boolean {
+  const sources = [...settingsFiles(env, cwd, managedSettingsPaths()).map((file) => ({ file })), ...settingsArguments(commandLines, cwd)];
+  for (const src of sources) {
+    // As in claude-settings.ts, extract only this key: settings env may contain credentials.
+    const r = spawnSync("/usr/bin/plutil", ["-extract", "permissions.defaultMode", "raw", "-expect", "string", "-o", "-", "file" in src ? src.file : "-"], {
+      input: "inline" in src ? src.inline : undefined, encoding: "utf8", timeout: 5000,
+      env: { PATH: "/usr/bin:/bin", LC_ALL: "C", LANG: "C" },
+    });
+    if (r.status === 0 && r.stdout.replace(/\n$/, "") === "bypassPermissions") return true;
+  }
+  return false;
+}
+
+/**
+ * Terminal enrollment is the opt-in, not evidence of attendance. Re-read host evidence on every
+ * action; inst.host is a cached approval profile and cannot establish the current permission mode.
+ * Unknown permission fields/settings do not manufacture either safe values or bypass evidence.
+ */
+/**
+ * Codex turn metadata client_type values that mark the ChatGPT desktop app rather than the Codex CLI:
+ * its Codex side sends desktop_app, and its Work mode macos_app (ChatGPT 26.1117, seen 2026-11-20).
+ * Either admits a room join, and either makes the connection an app for dialogs (never open).
+ */
+export const CODEX_APP_CLIENT_TYPES: ReadonlySet<string> = new Set(["desktop_app", "macos_app"]);
+
+export function roomEligibility(inst: Instance, evidence: RoomIdentityEvidence): RoomEligibility {
+  const no = (): RoomEligibility => Object.freeze({ eligible: false, refused: true, reason: ROOM_REFUSALS.ineligible });
+  const yes = (): RoomEligibility => Object.freeze({ eligible: true });
+  const env = process.env;
+  const name = evidence.harness ?? "";
+  if (inst.ctx.kind !== "root" || evidence.codex.malformed || evidence.subagent || inst.singletonViolation || evidence.singleton_violation || inst.registration
+    || inst.keyed || inst.hostKey || multiModelRegistration.test(name) || launchMarker(env)) return no();
+  if (unattendedClaude(env) || (hostSession(env) && !desktopApp(env))) return no();
+  if ((env.CLAUDE_CODE_CHILD_SESSION && env.CLAUDE_CODE_CHILD_SESSION !== "0")
+    || (env.CLAUDE_CODE_HOST_SESSION_ID && env.CLAUDE_CODE_SESSION_ID && env.CLAUDE_CODE_HOST_SESSION_ID !== env.CLAUDE_CODE_SESSION_ID)) return no();
+  // Preserve the launch-tree guard's fail-closed behavior when process/registry evidence is unreadable.
+  try { if (launchedTree(env)) return no(); } catch { return no(); }
+
+  if (/^codex-mcp-client$/i.test(name)) {
+    if (evidence.scope !== "dedicated-process" || inst.carried || inst.desktopEntry) return no();
+    const c = evidence.codex;
+    if (!c.metadata_present || !c.thread_id || c.thread_source !== "user" || c.turn_trigger === "exec") return no();
+    // Codex sends no originator in ordinary turns. An absent override is the CLI; the app
+    // identifies itself with client_type or the same desktop originator markers as profileOf.
+    for (const originator of [c.originator, env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE]) {
+      if (originator && originator !== "codex_cli_rs" && !CODEX_APP_CLIENT_TYPES.has(originator)
+        && !/desktop|chatgpt|codex[ _-]?app/i.test(originator)) return no();
+      if (/t3[- ]?code/i.test(originator ?? "")) return no();
+    }
+    const lines = ancestorCommandLines(3);
+    if (lines && codexBypassesPrompts(lines)) return no();
+    if (c.sandbox === "danger-full-access" || c.approval_policy === "never") return no();
+    return yes();
+  }
+
+  const shared = inst.desktopEntry || DESKTOP_CLIENT.test(name);
+  if (shared) {
+    if (evidence.scope !== "conversation-token" || !inst.carried || !registrationAgrees("claude", name, true)) return no();
+  } else if (evidence.scope !== "dedicated-process" || !/^claude-code$/i.test(name) || (!interactiveClaudeCli(env) && !desktopApp(env))) return no();
+  const lines = ancestorCommandLines(3);
+  if (lines && canBypassPrompts(lines)) return no();
+  if (roomBypassSettings(env, inst.cwd, lines ?? [])) return no();
+  return yes();
+}
+
+/**
+ * Revision 3 (docs/design-rooms.md): whether a conversation on this host may ask the person to open
+ * a room through the host's own prompt, which relay must know reaches the person. Only the two
+ * surfaces whose approval dialog is qualified idle and busy, as a person's answer, qualify:
+ * interactive Claude Code in a terminal and the Codex CLI (DIALOG_QUALIFICATIONS, experiments/
+ * answers.md C-a/C-g/C-k and X-b/X-e/X-g/X-j). The profile must already put relay's questions to
+ * the person (elicit "dialog": no bypass mode, no Elicitation hook or bypass default mode, not
+ * unattended, SDK, desktop, T3 or an unknown originator), and ask_user must not be "never". The
+ * shared desktop entry and the desktop app's own connection never qualify: their dialogs are off.
+ * Codex's app (ChatGPT desktop) is withheld with its busy dialogs (XA-f unrun). Per-call evidence
+ * (roomEligibility, fresh settings) is checked again by the caller on every open.
+ */
+export function roomOpenDialog(
+  profile: HostProfile, client: ClientInfo | undefined, env: NodeJS.ProcessEnv, opts: { desktopEntry?: boolean; askUser?: string } = {},
+): { qualified: true; surface: "claudeCli" | "codexCli"; keepsForm: boolean; why: string } | { qualified: false; why: string } {
+  const name = client?.name ?? "";
+  if (opts.desktopEntry || DESKTOP_CLIENT.test(name)) return { qualified: false, why: DIALOG_QUALIFICATIONS.sharedDesktop.withheld };
+  if (opts.askUser === "never") return { qualified: false, why: 'ask_user is "never"' };
+  if (profile.elicit !== "dialog") return { qualified: false, why: profile.why };
+  if (/^claude-code$/i.test(name) && interactiveClaudeCli(env) && !unattendedClaude(env) && !desktopApp(env)) {
+    return { qualified: true, surface: "claudeCli", keepsForm: !profile.withdraws, why: DIALOG_QUALIFICATIONS.claudeCli.label };
+  }
+  const originator = env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE;
+  if (/^codex-mcp-client$/i.test(name) && (!originator || originator === "codex_cli_rs")) {
+    return { qualified: true, surface: "codexCli", keepsForm: !profile.withdraws, why: DIALOG_QUALIFICATIONS.codexCli.label };
+  }
+  return { qualified: false, why: DIALOG_QUALIFICATIONS.unknown.withheld };
+}
 
 /**
  * What relay can tell about the host. `hostCommandLines` are the command lines of the processes

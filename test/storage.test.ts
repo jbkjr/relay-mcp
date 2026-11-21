@@ -1594,12 +1594,13 @@ test("storage: doctor says how much relay keeps, the room left on its disk and t
   assert.deepEqual(unset.lines, [
     "5.0 MB in /x/relay, with the records of 3 runs; 200.0 GB free on its disk",
     "logs: kept whole (log_max_mb not set)",
-    "records: kept until you delete them (keep_records_days not set); relay clean and a worker remove only the temporary directories relay left behind",
+    "records: kept until you delete them (keep_records_days not set), ended rooms' transcripts too; relay clean and a worker remove only the temporary directories relay left behind",
   ]);
   assert.equal(unset.warning, null);
   const set = storageReport({ ...u, free: LOW_FREE - 1 }, { log_max_mb: 5, keep_records_days: 30 });
   assert.match(set.lines[1], /^logs: each rotated at 5 MB to <name>\.1/);
   assert.match(set.lines[2], /^records: a run's are forgotten after 30 days without activity/);
+  assert.match(set.lines[2], /; an ended room's, with its transcript, 30 days after it ended/);
   // Rounded down: just under 1 GB never reads as 1 GB.
   assert.match(set.warning!, /^only 1023\.9 MB free on the disk holding \/x\/relay\. Once it is full, relay can keep no copy of a turn's prompt, log or final message and cannot update its registry, so turns fail and what they said may not be recorded\. Free space there/);
   // The copies of the registry made before upgrades, which nothing removes, are listed for the person to delete.

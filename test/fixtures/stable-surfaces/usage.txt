@@ -11,6 +11,15 @@ relay — delegation, consultation, discussion and review across families of cod
   relay tree [run_id] [--watch]       jobs, threads, discussions and reviews as one tree
   relay chat <discussion_id>          tail a discussion; type a line to send it to both participants
         [--say "message"] [--print]   one-shot forms: inject a message / print the transcript and exit
+  relay room new                      create a room; print one invitation prompt per conversation
+                                      (on macOS, then offer each on the clipboard in turn, clearing it after)
+  relay room list                     list rooms as JSON (no transcript or credentials)
+  relay room <id>                      follow a room; type a line to add terminal text
+        --print                       print the full transcript and exit (no terminal required)
+        --say "message"               add one terminal line; print the JSON result
+        --reseat <member-1|member-2>   review a seat, type the exact confirmation, print a new prompt
+        --close                       review the room, type the exact confirmation, close it
+                                      Room writes require your own interactive terminal.
   relay approvals                     approval requests waiting for a decision
   relay adopt <id> --to <fingerprint>  explicitly authorize takeover by the connection named in status
   relay approve <request_id> [--job] [note]   let a launched agent do what it asked: needs an
@@ -24,7 +33,8 @@ relay — delegation, consultation, discussion and review across families of cod
                                       (all finished runs if no id; unmerged branches are kept),
                                       relay's leftover temporary directories, and, if
                                       keep_records_days is set, records of runs with no
-                                      activity for that many days
+                                      activity for that many days; rooms expire independently,
+                                      with transcripts kept for that many days after ending
   relay clean --forget <run_id> [--write]
                                       forget a finished run kept because its repository is gone:
                                       its records and relay's own files for it; prints what it

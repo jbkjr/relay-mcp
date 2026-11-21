@@ -3,6 +3,7 @@
 import crypto from "node:crypto";
 import { callerLabel, type Contribution } from "./families.js";
 import { familyOf, SINGLETON_REASON, type Instance } from "./caller.js";
+import type { RoomIdentityEvidence } from "./room-types.js";
 
 export type Topology = "dedicated" | "shared" | "unknown";
 export const SHARED_REASON = "Desktop chats in the main window share one relay process. Cowork, the Code tab's in-app bridge, remote Cowork and widgets share a second. Within each process every conversation carries its own session token, which keeps its jobs, approval requests and events apart from the others'. Code-tab sessions also have their own dedicated relay registration.";
@@ -40,6 +41,8 @@ export interface CallIdentity {
   readonly contribution: Contribution;
   readonly session: SessionDiagnostic;
   readonly codexSubagent: boolean;
+  /** Validated per-call room evidence; deliberately excluded from the persisted snapshot. */
+  readonly codex: RoomIdentityEvidence["codex"];
   readonly hostModel?: string;
 }
 export const fingerprint = (inst: Instance): string => crypto.createHash("sha256").update(inst.token).digest("hex").slice(0, 24);
@@ -80,7 +83,7 @@ export function opencodeSession(meta: Record<string, unknown> | undefined): stri
   if (typeof v !== "string" || !v.trim() || v.length > 4096) throw new Error("malformed session metadata");
   return v;
 }
-/** Recognized session fields are validated even on unqualified hosts. Raw keys never leave here. */
+/** Recognized session fields are validated even on unqualified hosts. Raw keys never enter snapshots. */
 export function callIdentity(inst: Instance, meta: Record<string, unknown> | undefined, protocol: string, client?: { name: string; version: string }): CallIdentity {
   const evidence: string[] = [];
   const field = (obj: Record<string, unknown>, key: string, path = key): string | undefined => {
@@ -97,7 +100,8 @@ export function callIdentity(inst: Instance, meta: Record<string, unknown> | und
   field(m, "windowId");
   const conversation = field(m, "anthropic/conversationUuid"), opencodeKey = field(m, OPENCODE_SESSION);
   let turn: Record<string, unknown> = {};
-  if (Object.hasOwn(m, "x-codex-turn-metadata")) {
+  const metadataPresent = Object.hasOwn(m, "x-codex-turn-metadata");
+  if (metadataPresent) {
     const v = m["x-codex-turn-metadata"];
     if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error("malformed session metadata");
     turn = v as Record<string, unknown>;
@@ -107,6 +111,30 @@ export function callIdentity(inst: Instance, meta: Record<string, unknown> | und
   if ((topThread && nestedThread && topThread !== nestedThread) || (topSession && nestedSession && topSession !== nestedSession)) throw new Error("conflicting session metadata");
   const model = field(turn, "model", "x-codex-turn-metadata.model");
   const source = field(turn, "thread_source", "x-codex-turn-metadata.thread_source");
+  let malformed = false;
+  const roomField = (key: string): string | null => {
+    if (!Object.hasOwn(turn, key)) return null;
+    const v = turn[key];
+    if (typeof v !== "string" || !v.trim() || v.length > 4096) { malformed = true; return null; }
+    return v;
+  };
+  const trigger = roomField("turn_trigger");
+  const clientType = roomField("client_type");
+  // sandbox is the native implementation (seatbelt/none), not the permission mode.
+  const originator = roomField("originator");
+  const sandbox = roomField("sandbox_mode");
+  roomField("sandbox");
+  const approvalPolicy = roomField("approval_policy");
+  let autoReview: boolean | null = null;
+  if (Object.hasOwn(turn, "auto_review_enabled")) {
+    if (typeof turn.auto_review_enabled !== "boolean") malformed = true;
+    else autoReview = turn.auto_review_enabled;
+  }
+  const codex: RoomIdentityEvidence["codex"] = {
+    malformed, metadata_present: metadataPresent, thread_id: nestedThread ?? null, thread_source: source ?? null, turn_trigger: trigger ?? null,
+    // client_type is the app marker when no originator is supplied in turn metadata.
+    originator: originator ?? clientType ?? null, sandbox: sandbox ?? null, auto_review: autoReview, approval_policy: approvalPolicy ?? null,
+  };
   const codexSubagent = source === "subagent";
   if (inst.ctx.kind === "root" && sessionDiagnostic(inst).topology === "dedicated") {
     inst.singletonStamps ??= new Map();
@@ -128,5 +156,15 @@ export function callIdentity(inst: Instance, meta: Record<string, unknown> | und
     family_label: contribution.label, routing_family: familyOf(inst), subagent: codexSubagent,
     parent: inst.ctx.kind === "child" ? inst.ctx.nodeId : null,
   };
-  return freeze({ snapshot, contribution: { ...contribution, snapshot }, session, codexSubagent, ...(model ? { hostModel: model } : {}) });
+  return freeze({ snapshot, contribution: { ...contribution, snapshot }, session, codexSubagent, codex, ...(model ? { hostModel: model } : {}) });
+}
+
+/** Call after resolving a shared token view. Evidence is neither authority nor a stored caller. */
+export function roomIdentityEvidence(inst: Instance, identity: CallIdentity): RoomIdentityEvidence {
+  return freeze({
+    call_id: identity.snapshot.call_id, scope: sessionDiagnostic(inst).scope,
+    harness: inst.clientName ?? identity.snapshot.harness, family: identity.contribution.label,
+    subagent: identity.codexSubagent || inst.ctx.kind === "child",
+    singleton_violation: Boolean(inst.singletonViolation), codex: { ...identity.codex },
+  });
 }

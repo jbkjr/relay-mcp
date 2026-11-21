@@ -20,11 +20,14 @@ export const NOTIFICATION_SCRIPT = 'on run argv\ndisplay notification (item 1 of
 
 // The longest socket path the driver's relay turns make, below a scratch root. macOS allows 103 bytes.
 const LONGEST_SOCKET = "/run-XXXXXX/stage2/home/.relay-t/s/relay-probe-XXXXXX/relay.sock";
+// The parallel run (stage2-parallel.mjs) puts each driver one level deeper, the longest at stage2/main.
+const LONGEST_PARALLEL_SOCKET = LONGEST_SOCKET.replace("/stage2/", "/stage2/main/");
 
-export function validateConfig(input) {
+/** `parallel`: whether stage 2 runs as two drivers at once (stage2-parallel.mjs), which nests its scratch one level deeper. */
+export function validateConfig(input, { parallel = false } = {}) {
   const cfg = { store: path.join(os.homedir(), ".local/share/relay-codex-pins"), scratchRoot: path.join(os.homedir(), ".rsm/q"), timeoutMs: 2 * 60 * 60_000, ...input };
   for (const key of ["repo", "store", "scratchRoot"]) if (!path.isAbsolute(cfg[key] ?? "")) throw new Error(`${key} must be absolute`);
-  if (Buffer.byteLength(cfg.scratchRoot + LONGEST_SOCKET) > 103) throw new Error(`scratchRoot ${cfg.scratchRoot} is too long: relay's unix sockets below it would pass macOS's 103-byte limit`);
+  if (Buffer.byteLength(cfg.scratchRoot + (parallel ? LONGEST_PARALLEL_SOCKET : LONGEST_SOCKET)) > 103) throw new Error(`scratchRoot ${cfg.scratchRoot} is too long: relay's unix sockets below it would pass macOS's 103-byte limit`);
   if (cfg.oldBin !== undefined && !path.isAbsolute(cfg.oldBin)) throw new Error("oldBin must be absolute");
   if (!Number.isSafeInteger(cfg.timeoutMs) || cfg.timeoutMs < 1000 || cfg.timeoutMs > 2 * 60 * 60_000) throw new Error("timeoutMs must be 1000..7200000");
   return cfg;
@@ -117,9 +120,13 @@ function failedQualificationPath(store, attempt) {
   return path.join(store, "failed-qualifications", `${key}.json`);
 }
 
-/** Holds one updater/rollback lock. Durable evidence is retained on every failure. */
-export async function runQualifier(input, { services: supplied, supervisor: suppliedSupervisor, version: requested, force = false, signals = true, aqua = true } = {}) {
-  const cfg = validateConfig(input);
+/**
+ * Holds one updater/rollback lock. Durable evidence is retained on every failure. `parallel` runs
+ * stage 2 through stage2-parallel.mjs (item 30's hour-long call beside the other items, in two
+ * driver processes) instead of codex-stage2.mjs alone; off unless asked for.
+ */
+export async function runQualifier(input, { services: supplied, supervisor: suppliedSupervisor, version: requested, force = false, signals = true, aqua = true, parallel = false } = {}) {
+  const cfg = validateConfig(input, { parallel });
   initStore(cfg.store);
   const release = acquireLock(cfg.store);
   if (!release) return { state: "busy" };
@@ -181,11 +188,15 @@ export async function runQualifier(input, { services: supplied, supervisor: supp
     copyBuild(cfg.repo, tree);
     const driver = path.join(tree, "scripts/codex-qualify/codex-stage2.mjs");
     const stage2Sha256 = sha256(driver);
+    // The parallel coordinator is the one command the supervisor runs; it runs two drivers below it.
+    const coordinator = path.join(tree, "scripts/codex-qualify/stage2-parallel.mjs");
+    const mode = parallel ? "parallel" : "serial";
     const out = path.join(scratch, "stage2");
+    log(`Running stage 2 (${mode})`);
     const logFd = fs.openSync(path.join(runDir, "stage2.log"), "wx", 0o600);
     let driverError;
     try {
-      await services.command(process.execPath, [driver, tree, out, version, candidate.bin, "--source", source.source, "--old-bin", oldBin], {
+      await services.command(process.execPath, [parallel ? coordinator : driver, tree, out, version, candidate.bin, "--source", source.source, "--old-bin", oldBin], {
         cwd: tree, timeoutMs: cfg.timeoutMs, logFd, inspect: true,
         // Items 28 and 30 stay "not run" without these, and judgeVerdict refuses a verdict with any part not run.
         env: { RELAY_TEST_PUBLIC_NET: "1", RELAY_TEST_ESCALATION_LONG: "1" },
@@ -197,6 +208,8 @@ export async function runQualifier(input, { services: supplied, supervisor: supp
     const verdict = JSON.parse(fs.readFileSync(scratchVerdict, "utf8"));
     const verdictPath = path.join(runDir, "stage2-verdict.json");
     atomicJson(verdictPath, verdict);
+    // A parallel run's verdict is the coordinator's, never one driver's alone.
+    if (parallel && verdict.mode !== "parallel") throw driverError ?? new Error(`stage 2 ran in parallel but its verdict says mode ${verdict.mode}`);
     // A candidate cannot opt into a historical schema: judge against the current one.
     const judged = judgeVerdict(verdict, version, CURRENT_VERDICT_SCHEMA);
     if (!judged.ok) {
@@ -222,6 +235,7 @@ export async function runQualifier(input, { services: supplied, supervisor: supp
       qualifiedAt: new Date().toISOString(), verdictPath, verdictSchema: CURRENT_VERDICT_SCHEMA,
       verdictSha256: sha256(verdictPath), sourceCommit: source.sourceCommit,
       sourceArchiveSha256: source.sourceArchiveSha256, relayBuild, stage2Sha256, nodeVersion: process.version,
+      stage2Mode: mode, ...(parallel ? { stage2ParallelSha256: sha256(coordinator) } : {}),
     };
     const target = publishTree(cfg.store, candidate.vendor, manifest);
     const transaction = promote(cfg.store, target, "promote", () => supervisor.check());
@@ -263,12 +277,12 @@ if (isMain(import.meta.url)) {
   const [configFile, action, ...rest] = process.argv.slice(2);
   let options;
   try {
-    const { values } = parseArgs({ args: rest, options: { version: { type: "string" }, force: { type: "boolean", default: false } } });
+    const { values } = parseArgs({ args: rest, options: { version: { type: "string" }, force: { type: "boolean", default: false }, parallel: { type: "boolean", default: false } } });
     if (!configFile || !["--run", "--rollback"].includes(action) || (action === "--rollback" && rest.length) ||
         (values.version !== undefined && !/^\d+\.\d+\.\d+$/.test(values.version))) throw new Error("invalid arguments");
     options = values;
   } catch {
-    console.error("Usage: node codex-qualifier.mjs /absolute/qualifier.json --run [--version X.Y.Z] [--force] | --rollback"); process.exitCode = 2;
+    console.error("Usage: node codex-qualifier.mjs /absolute/qualifier.json --run [--version X.Y.Z] [--force] [--parallel] | --rollback"); process.exitCode = 2;
   }
   if (options) {
     try {

@@ -1,7 +1,7 @@
 # Using relay
 
-The tools, by what they do: [Delegate](#delegate), [Consult](#consult) (`ask`), [Discuss](#discuss) and
-[Review](#review), with [Speed](#speed), [Approval requests](#approval-requests),
+The tools, by what they do: [Delegate](#delegate), [Consult](#consult) (`ask`), [Discuss](#discuss),
+[Review](#review) and [Rooms](#rooms) (`room`), with [Speed](#speed), [Approval requests](#approval-requests),
 [Extensions](#extensions) and [Watching and stopping](#watching-and-stopping). Configuration is in
 [configuration.md](configuration.md), and what each of these does and does not protect in
 [security-model.md](security-model.md).
@@ -30,6 +30,7 @@ Each host session gets these MCP tools from relay (in Claude Code, `mcp__relay__
 | `approve` | Decides a launched agent's approval request. Not offered to launched agents. |
 | `confirm` | Proposes allowing a request through the host's own permission prompt, so that you decide. Offered only to a root session on a host relay has identified as prompting for it (see [Approval requests](#approval-requests)). |
 | `adopt` | Takes over an orphaned run into this connection, with your authorization ([Run access and recovery](install.md#run-access-and-recovery-in-10)). |
+| `room` | Joins, reads and sends in a room that links this conversation with another existing one, or asks you to open one (see [Rooms](#rooms)). Root sessions only; starts no agent. |
 
 A Codex agent relay launches with stage 2 on (see [Codex raw network](configuration.md#codex-raw-network-stage-2)) also has `escalate`, which asks for capabilities for its next turn and runs nothing itself.
 
@@ -156,6 +157,138 @@ The whole-home deny covers Codex's `logs_2.sqlite`, `state_5.sqlite` and `histor
 
 **A pass over partial coverage is unknown.** Relay applies one rule, mechanically, to each review's verdict and to the reconciled one: a `pass` stands only if its coverage is declared `complete: true` with nothing listed as not examined; otherwise it is recorded as `unknown` (with a note, and the declared verdict kept beside it). A missing coverage statement is not complete. Relay goes by what the reviewer declared and never judges coverage itself. `fail` and `unknown` stand as given; anything else is no verdict, and a review or closing block with no verdict is recorded as `not stated`. The review's verdict is the one both sides' closing blocks reach, whether or not they agreed on the list (so `not stated` when neither declares one); otherwise it is `unresolved`, with each side's position under `verdict_positions` (`not stated` for a side that declared no verdict). One side's block never settles it alone, so the side that closes the reconciliation (often the caller, whose work is under review) cannot set it. Each side's closing verdict and coverage, as declared and as they stand, are kept in the result under `closing`. One more rule, also over declarations only, applies to a closing block: anything both independent reviews declared not examined was examined by neither, so the block's pass stands only if its coverage lists that under `examined` (in the same words, ignoring case); otherwise it is `unknown`. Two partial reviews that covered different things can still pass together.
 
+## Rooms
+
+A room lets two of your existing root conversations compare recommendations, exchange facts, and
+reach agreement or state a crux. Both must use relay on the same machine and relay home. Same-family
+pairs are allowed. Relay launches nobody: each conversation keeps its own files, tools, runs and
+permissions, and joining grants no access to the other's work.
+
+1. In **your own terminal**, run `relay room new`. It creates a room and prints two labelled
+   invitation prompts. There is no creation confirmation to type. Each invite is one-use and
+   expires in ten minutes, and a room still waiting for a seat ends (`expired`) when that seat's
+   invite lapses unused, so both conversations must join within those ten minutes. A room never
+   lasts past 24 hours from its creation (the `expires_at` that `relay room list` shows). On macOS it then offers the prompts on
+   the clipboard one at a time: press Enter to copy member-1's, paste it, press Enter to replace it
+   with member-2's, paste that, and press Enter once more to clear the clipboard (type `n` to skip).
+   The clipboard is cleared of the invites however the flow ends, Ctrl-C included, unless you
+   copied something else meanwhile; if relay cannot confirm the clear, it says so and asks you to
+   replace the clipboard yourself.
+2. Paste one prompt into each intended conversation. Each calls `room` with `action:"join"` and its
+   invite, carrying its existing `session_token` if the entry uses one. A ChatGPT chat without local
+   relay tools cannot join.
+3. The conversations read with a room cursor and take alternating sends, starting with member-1.
+   Each message has stance `continue`, `agree` or `crux`. Two consecutive acknowledged agrees end in
+   agreement; a crux gets one answering turn. They report the ending and stop. There are at most 24
+   member sends in all.
+
+**Or let a conversation ask.** In interactive Claude Code in a terminal or the Codex CLI, a
+conversation can call `room` with `action:"open"`. Relay then asks you in that host's own dialog,
+with its own text: a room passes information only, never approvals, permissions or control of work;
+at most 24 messages; with one other conversation you choose. Only your explicit "open the room"
+opens it; declining or closing the dialog opens nothing, and relay puts no time limit on your
+answer. The conversation may add a one-line purpose, which the dialog shows as its own unverified
+words. On your yes the asking conversation takes member-1, and relay puts member-2's prompt on your
+clipboard (replacing what is there); the asking model never sees its invite. Paste it into the
+conversation you choose within ten minutes: the room ends if that invite lapses unused. If relay cannot write the clipboard, nothing opens. A conversation can ask
+again after you decline, but not while one of its questions is open or while it holds a seat in a
+live room.
+
+Where the joining conversation is also interactive Claude Code or the Codex CLI, its join asks you
+"Join this room?" first, showing who holds the other seat and how the room was created; saying no
+seats nothing and leaves the invite usable until it lapses. That question is asked for terminal invites too.
+`relay room list` and `--print` show each room's origin (terminal, or opened by a conversation).
+Nowhere else can a conversation open a room. The Codex app (ChatGPT desktop, its Work mode
+included), the desktop Code tab, Claude desktop chats and Cowork, and hosts with
+`ask_user: "never"` can join from a pasted invite but cannot open a room, because relay cannot tell
+that a dialog there reaches you; those hosts also do not ask before a join. `claude -p`,
+`codex exec`, T3 Code, OpenCode and unknown wrappers cannot use rooms at all (see **Who may join**
+below). An invite is passed on only by your paste: relay refuses
+one in room text and in every other relay tool's arguments. A model with an unrestricted shell could
+still read the clipboard, or start another conversation itself and paste the invite there;
+`relay room <id> --print` shows which host and client took each seat.
+
+**A bounded exchange.** A message waits for the other conversation's next room call; nothing wakes
+an idle conversation, and you may need to nudge either side. A wait defaults to 45 seconds (at most
+50, or a shorter host or config limit; up to six hours in interactive Claude Code, where the call
+moves to the background) and can return empty. A conversation may stay quiet for as long as it
+works: waits are refused only once the other conversation is gone (its relay server has exited),
+or, where relay cannot tell (a desktop chat), after two hours without it calling `room`; unread
+text and endings are still returned. A bare call from the other side refreshes its presence but
+does not wake a wait. Presence reports last calls, not whether a model is making progress.
+
+From your terminal:
+
+```sh
+relay room list                             # inventory, without text or credentials
+relay room <id> --print                      # full transcript and ending
+relay room <id>                              # follow; type a line to add terminal text
+relay room <id> --say "consider this fact"    # add one terminal line
+relay room <id> --reseat member-1             # review both seats; type the printed confirmation
+relay room <id> --close                       # review both seats; type the printed confirmation
+```
+
+**Seats and restarts.** Re-seating revokes that seat's owner and outstanding invites immediately,
+pauses the room, and prints a replacement prompt; paste it into the intended conversation within
+ten minutes, since the paused room ends (`expired`) if the replacement invite lapses unused. History
+and the turn budget remain. A member is bound to its relay server: a restarted Codex or Claude Code
+server needs a re-seat. A shared desktop chat keeps its seat while it keeps its session token and
+the same relay home, key file and registry; losing the token needs a re-seat
+([Claude desktop app and Cowork](install.md#claude-desktop-app-and-cowork)). The Code tab's
+dedicated and shared relay entries are separate owners.
+
+**Who may join.** Admission is checked on every room call. Codex CLI and local ChatGPT Codex roots
+need valid turn metadata with `thread_source:"user"`; `turn_trigger:"exec"`, subagents, full access
+(`danger-full-access`), approval policy `never` and custom or multi-model originators are refused.
+CLI and desktop originators are admitted; auto-review alone is admitted. Interactive Claude Code,
+the positively identified desktop Code tab, and token-scoped Claude desktop chats and Cowork are
+admitted unless relay detects disqualifying evidence: launched-agent or child-session markers,
+unattended or SDK operation, or bypass permission mode. Known T3 Code, OpenCode and unknown wrappers
+are refused. Native Claude subagents sharing their root's server can be indistinguishable from it.
+Relay **cannot tell whether anyone is at a Claude desktop chat or Cowork session**, or what it may
+do unprompted; the terminal opt-in does not prove attendance.
+
+**Room text is not your consent.** Room text comes from another conversation's model, never from
+you. A terminal line is labelled as coming from a terminal, which also does not prove your
+instruction. After an owner receives external room text, `user_confirmed:true` on `approve` counts
+for nothing: it cannot override a pending request's `asking` or `dismissed` person-question state or
+claim a confirmation audit label. Existing qualified person paths remain available, and ordinary
+root judgments otherwise permitted, denials and grants keep their rules. This is not a general
+approval or grant ban, and it cannot prevent lobbying or track text copied to another owner. The
+rule follows the relay owner, not the conversation: after a Codex or Claude Code relay server
+restarts, the same conversation is a new owner with no record of the room text it still holds. A
+session's own shell can also read a transcript with `relay room <id> --print`, which records
+nothing. The room terminal commands require TTY input and output and refuse known host-shell and
+launched-agent evidence before writes. They are best effort: an unrestricted local shell can unset
+markers, allocate a terminal or write the registry directly.
+
+**What is kept.** Transcripts are local records, readable by launched agents under the limits in
+[What confines a launched agent](security-model.md#what-confines-a-launched-agent). Membership does
+not make stored text secret. Credentials relay recognizes are cut from member messages, terminal
+lines and purpose lines before they are stored, as in its other records
+([Secrets cut from what relay writes](security-model.md#what-relay-relies-on-what-it-checks-and-what-it-does-not-do));
+text carrying an invite or a session token is refused instead. Room calls expire rooms but never delete their rows. `relay clean` and
+daily housekeeping delete transcripts `keep_records_days` after a room ends; unset or null keeps
+them indefinitely. Polls do not extend that period. Exposure hashes remain indefinitely; backups and
+host histories are outside deletion guarantees. A registry rebuild or WAL cleanup may wait for
+active room calls and waits to finish.
+
+Rooms were checked live in a terminal on 2026-11-16, with interactive Claude Code 2.1.325 and
+2.1.326 and Codex CLI 0.169.0: opening, joining, declining, closing the question and a long single
+wait. The desktop apps were checked on 2026-11-20, with the Claude desktop app and ChatGPT
+26.1117:
+- a Claude desktop chat and a conversation on ChatGPT's Codex side joined from pasted invites and
+  agreed;
+- asking either to open a room was refused;
+- after ChatGPT was quit mid-room, the other side was told it had gone, and a new conversation
+  re-seated with `--reseat` caught up and agreed;
+- a ChatGPT Work-mode chat joined and exchanged messages with a Claude desktop chat, still counted
+  as present after three idle minutes, and counted as gone once ChatGPT was quit. A Work-mode room
+  was not run to agreement.
+
+ChatGPT asks before each of relay's tool calls in a Work-mode chat unless you allow it always.
+No unattended convergence is promised.
+
 ## Speed
 
 `delegate`, `ask`, `discuss`, `review` and `resume` take `speed`: `standard` (the default), `fast`, or `ultrafast`. A faster speed costs you money or allowance, so the tool texts tell agents to pass one only when you ask for it.
@@ -251,7 +384,7 @@ relay tree --watch
 relay cancel <id>     # a job, thread, discussion or review, and everything under it
 relay cancel <run_id> # the whole run
 relay clean [run_id]  # remove finished runs' worktrees and merged relay/* branches (all finished runs if no id),
-                      # relay's leftover temporary directories, and old runs' records if keep_records_days is set
+                      # relay's leftover temporary directories, room expiry, and old run/room records under keep_records_days
 relay clean --forget <run_id> [--write]
                       # forget a finished run kept because its repository is gone: its records and relay's own
                       # files for it; prints what it would do, and changes nothing without --write

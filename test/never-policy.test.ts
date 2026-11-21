@@ -289,19 +289,19 @@ test("checkpoint identity history retains both targets after protected symlink r
   } finally { f.close(); }
 });
 
-test("schema 4 stores the run floor in JSON params without migration and reconstructs old runs", () => {
+test("schema 5 stores the run floor in JSON params without migration and reconstructs old runs", () => {
   const f = fixture();
   try {
     const file = path.join(process.env.RELAY_HOME!, "relay.db"); closeDbForTests();
     const old = new DatabaseSync(file);
-    assert.equal((old.prepare("PRAGMA user_version").get() as any).user_version, 4);
+    assert.equal((old.prepare("PRAGMA user_version").get() as any).user_version, 5);
     assert.equal(old.prepare("PRAGMA table_info(runs)").all().some((c: any) => c.name === "never_floor_json"), false);
-    // An existing schema-4 run has no private params yet. Reopening must not migrate it.
+    // An existing schema-5 run has no private params yet. Reopening must not migrate it.
     old.prepare("UPDATE runs SET config_json = json_remove(config_json, '$.params_json') WHERE id = ?").run(f.run);
     old.close();
     db();
     assert.equal(registryBackup(), null);
-    assert.equal((db().prepare("PRAGMA user_version").get() as any).user_version, 4);
+    assert.equal((db().prepare("PRAGMA user_version").get() as any).user_version, 5);
     db().prepare("UPDATE runs SET config_json = json_set(config_json, '$.params_json.unrelated', 7) WHERE id = ?").run(f.run);
     const config = runConfig(f.run);
     assert.equal("params_json" in config, false, "private run params are not configuration");

@@ -174,7 +174,7 @@ boxed("upgrade: schema 2 is backed up before adding private turn temp identities
   previous.close();
   const migrated = withNext(b, 'return { turn: dbm.nodeTurns("j_0200aaaa")[0], backup: dbm.registryBackup() };');
   assert.equal(migrated.status, 0, migrated.stderr);
-  assert.equal(userVersion(b.dbFile), 4);
+  assert.equal(userVersion(b.dbFile), 5);
   assert.deepEqual([migrated.out.turn.tmp_dir, migrated.out.turn.tmp_dev, migrated.out.turn.tmp_ino], [null, null, null]);
   assert.equal(migrated.out.turn.grant_json, null);
   assert.equal(migrated.out.turn.refusal_json, null);
@@ -202,8 +202,8 @@ boxed("upgrade: a real schema-3 registry gains launch_leaders, backed up first, 
 
   const migrated = withNext(b, "return { version: dbm.SCHEMA_VERSION, backup: dbm.db() && dbm.registryBackup() };");
   assert.equal(migrated.status, 0, migrated.stderr);
-  assert.equal(migrated.out.version, 4);
-  assert.equal(userVersion(b.dbFile), 4, "one open advances schema 3 to 4");
+  assert.equal(migrated.out.version, 5);
+  assert.equal(userVersion(b.dbFile), 5, "one open advances schema 3 to 5");
 
   // The v3 file is backed up unchanged before migration (the earlier open left a v0 backup too).
   const v3 = backups(b).filter((f) => f.startsWith("relay.db.backup-v3-"));
@@ -253,7 +253,7 @@ boxed("upgrade: a pre-release schema-4 launch_leaders keyed without start is reb
     { run_id: "run_x", leader_pid: 4000, kind: "worker", node_id: "j_2", start: "", created_at: 6 },
   ], "every row carried over; an unknown start becomes ''");
   assert.equal(r.out.leaders.find((l) => l.leader_pid === 4000).start, null, "'' reads back as an unknown start");
-  assert.equal(userVersion(b.dbFile), 4, "still schema 4");
+  assert.equal(userVersion(b.dbFile), 5, "current schema 5");
   assert.equal(backups(b).length, backupsBefore, "same schema version: no new backup");
   assert.ok(!tables(b.dbFile).includes("launch_leaders_rekey"), "no scratch table left behind");
 });
@@ -319,7 +319,7 @@ boxed("upgrade from 0.9.1: no process id the fixture records can name a process 
   for (const [where, v] of ids) assert.ok(typeof v === "number" && v > 2 ** 22 && v < 2 ** 31, `${where} = ${v} could be a live process's id`);
 });
 
-boxed("upgrade from 0.9.1: one open applies schemas 2, 3 and 4 with one unchanged schema-1 backup and keeps every run, node, turn and request", (b) => {
+boxed("upgrade from 0.9.1: one open applies schemas 2, 3, 4 and 5 with one unchanged schema-1 backup and keeps every run, node, turn and request", (b) => {
   registry091(b.dbFile);
   assert.equal(userVersion(b.dbFile), 1, "the fixture is a 0.9.1 registry");
   const before = contents(b.dbFile);
@@ -331,8 +331,8 @@ boxed("upgrade from 0.9.1: one open applies schemas 2, 3 and 4 with one unchange
 
   const r = withNext(b, "return { version: dbm.SCHEMA_VERSION, backup: dbm.db() && dbm.registryBackup() };");
   assert.equal(r.status, 0, r.stderr);
-  assert.equal(r.out.version, 4);
-  assert.equal(userVersion(b.dbFile), 4, "one open applies all intervening migrations");
+  assert.equal(r.out.version, 5);
+  assert.equal(userVersion(b.dbFile), 5, "one open applies all intervening migrations");
 
   // One backup, named for the version it holds: the 0.9.1 registry, unchanged.
   const made = backups(b);
@@ -349,7 +349,7 @@ boxed("upgrade from 0.9.1: one open applies schemas 2, 3 and 4 with one unchange
   for (const turn of after.turns) assert.deepEqual([turn.tmp_dir, turn.tmp_dev, turn.tmp_ino], [null, null, null]);
   for (const turn of after.turns) assert.equal(turn.grant_json, null);
   for (const turn of after.turns) assert.equal(turn.refusal_json, null);
-  assert.deepEqual(Object.keys(after).sort(), [...Object.keys(before), "calls", "launch_leaders"].sort(), "no table lost, two added");
+  assert.deepEqual(Object.keys(after).sort(), [...Object.keys(before), "calls", "launch_leaders", "rooms", "room_members", "room_bindings", "room_invites", "room_messages", "room_exposures"].sort(), "no table lost, eight added");
   for (const [table, rows] of Object.entries(before)) {
     const kept = after[table].map((row) => Object.fromEntries(Object.keys(rows[0] ?? {}).map((k) => [k, row[k]])));
     assert.deepEqual(kept, rows, `${table}: every row kept as it was`);

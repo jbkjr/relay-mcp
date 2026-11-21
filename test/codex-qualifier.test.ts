@@ -1005,7 +1005,7 @@ test("pinned Codex: passing verdicts with driver or promotion errors remain retr
 
 test("pinned Codex: CLI accepts --force with latest or either --version ordering and rejects rollback flags", (t) => {
   const root = scratch(t), missingConfig = path.join(root, "missing.json"), runner = path.join(scripts, "codex-qualifier.mjs");
-  for (const flags of [["--force"], ["--force", "--version", "0.164.0"], ["--version", "0.164.0", "--force"]]) {
+  for (const flags of [["--force"], ["--force", "--version", "0.164.0"], ["--version", "0.164.0", "--force"], ["--parallel"], ["--version", "0.164.0", "--parallel", "--force"]]) {
     const result = spawnSync(process.execPath, [runner, missingConfig, "--run", ...flags], { encoding: "utf8" });
     assert.equal(result.status, 1); assert.match(result.stderr, /ENOENT/); assert.doesNotMatch(result.stderr, /Usage:/);
   }
@@ -1190,4 +1190,55 @@ test("pinned Codex: pins from before build identities (a relayCommit) keep worki
   for (const bad of [null, "e".repeat(64), { ...good, scheme: "relay-build-v0" }, { ...good, sha256: "E".repeat(64) }, { ...good, version: "" }]) {
     assert.throws(() => P.validateManifest({ ...manifest, relayBuild: bad }), /relay build/, JSON.stringify(bad));
   }
+});
+
+test("pinned Codex: --parallel runs the stage-2 coordinator as the one supervised command and records the mode", async (t) => {
+  for (const parallel of [false, true]) {
+    const root = scratch(t), f = fixtureServices(root);
+    fs.writeFileSync(path.join(f.cfg.repo, "scripts/codex-qualify/stage2-parallel.mjs"), "fixture coordinator");
+    const command = f.services.command;
+    f.services.command = async (bin: string, args: string[], opts: any = {}) => {
+      if (!args[0]?.endsWith("stage2-parallel.mjs")) return command(bin, args, opts);
+      f.commands.push({ bin, args, opts });
+      fs.mkdirSync(args[2]); P.atomicJson(path.join(args[2], "stage2-verdict.json"), { ...pass(), mode: "parallel" });
+      return "";
+    };
+    const result = await runQualifier(f.cfg, { ...f, signals: false, parallel });
+    assert.equal(result.state, "promoted");
+    const stage2 = f.commands.filter((c) => /(codex-stage2|stage2-parallel)\.mjs$/.test(c.args[0] ?? ""));
+    assert.equal(stage2.length, 1, "one supervised stage-2 command either way");
+    const [invocation] = stage2, tree = invocation.args[1];
+    assert.equal(invocation.args[0], path.join(tree, `scripts/codex-qualify/${parallel ? "stage2-parallel" : "codex-stage2"}.mjs`));
+    assert.deepEqual(invocation.args.slice(2, 3), [path.join(path.dirname(tree), "stage2")], "the same output directory: the coordinator writes its verdict there");
+    assert.equal(invocation.opts.inspect, true); assert.equal(invocation.opts.timeoutMs, 1000);
+    assert.deepEqual(invocation.opts.env, { RELAY_TEST_PUBLIC_NET: "1", RELAY_TEST_ESCALATION_LONG: "1" });
+    const manifest = P.validateTarget(f.cfg.store, result.target);
+    assert.equal(manifest.stage2Mode, parallel ? "parallel" : "serial");
+    assert.equal(manifest.stage2Sha256, P.sha256(path.join(tree, "scripts/codex-qualify/codex-stage2.mjs")), "the item driver's digest in both modes");
+    assert.equal(manifest.stage2ParallelSha256, parallel ? P.sha256(path.join(tree, "scripts/codex-qualify/stage2-parallel.mjs")) : undefined);
+    assert.match(fs.readFileSync(path.join(result.runDir, "runner.log"), "utf8"), new RegExp(`Running stage 2 \\(${parallel ? "parallel" : "serial"}\\)`));
+  }
+});
+
+test("pinned Codex: a parallel run whose verdict is not the coordinator's never promotes and stays retryable", async (t) => {
+  const root = scratch(t), f = fixtureServices(root);
+  fs.writeFileSync(path.join(f.cfg.repo, "scripts/codex-qualify/stage2-parallel.mjs"), "fixture coordinator");
+  const command = f.services.command;
+  f.services.command = async (bin: string, args: string[], opts: any = {}) => {
+    if (!args[0]?.endsWith("stage2-parallel.mjs")) return command(bin, args, opts);
+    fs.mkdirSync(args[2]); P.atomicJson(path.join(args[2], "stage2-verdict.json"), { ...pass(), mode: "serial" });
+    return "";
+  };
+  const result = await runQualifier(f.cfg, { ...f, signals: false, parallel: true });
+  assert.equal(result.state, "failed"); assert.match(result.error, /ran in parallel but its verdict says mode serial/);
+  assert.deepEqual(qualificationFailures(f.cfg.store), [], "not a rejected candidate");
+  assert.equal(P.pointer(f.cfg.store, "current"), null);
+});
+
+test("pinned Codex: the parallel run's deeper scratch must also fit macOS's socket path limit", () => {
+  // The serial layout's longest socket below the root is 64 bytes; the parallel one's, at stage2/main, 69.
+  const fits = (n: number, parallel: boolean) => { try { validateConfig({ repo: "/r", scratchRoot: `/${"a".repeat(n)}` }, { parallel }); return true; } catch { return false; } };
+  assert.equal(fits(38, false), true); assert.equal(fits(39, false), false);
+  assert.equal(fits(33, true), true); assert.equal(fits(34, true), false);
+  assert.equal(fits(38, true), false, "a root that fits the serial run is refused for the parallel one");
 });

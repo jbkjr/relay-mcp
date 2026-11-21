@@ -351,8 +351,8 @@ export function storageReport(u: ControlDirUsage, cfg: Pick<RelayConfig, "log_ma
     `${size(u.bytes)} in ${u.dir}, with the records of ${u.runs} run${u.runs === 1 ? "" : "s"}${room}${u.problem ? ` (${u.problem})` : ""}`,
     cfg.log_max_mb === null ? "logs: kept whole (log_max_mb not set)" : `logs: each rotated at ${cfg.log_max_mb} MB to <name>.1, so about twice that is kept of each (log_max_mb)`,
     cfg.keep_records_days === null
-      ? "records: kept until you delete them (keep_records_days not set); relay clean and a worker remove only the temporary directories relay left behind"
-      : `records: a run's are forgotten after ${cfg.keep_records_days} days without activity, by relay clean and by a worker once a day, never while the run is in use (keep_records_days)`,
+      ? "records: kept until you delete them (keep_records_days not set), ended rooms' transcripts too; relay clean and a worker remove only the temporary directories relay left behind"
+      : `records: a run's are forgotten after ${cfg.keep_records_days} days without activity, by relay clean and by a worker once a day, never while the run is in use; an ended room's, with its transcript, ${cfg.keep_records_days} days after it ended (keep_records_days)`,
     ...(u.backups.length ? [`registry backups: ${u.backups.length}, made before relay upgraded its registry, each a whole copy of it then, prompts included; relay never removes them, whatever keep_records_days says. Delete them once you will not go back to the relay that wrote them: ${u.backups.join(", ")}`] : []),
   ];
   const warning = u.free !== null && u.free < LOW_FREE

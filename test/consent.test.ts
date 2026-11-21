@@ -434,7 +434,7 @@ test("desktop entry: every tool text and the instructions say which relay this i
     assert.match(DESKTOP_STEER, /^relay-desktop is the Claude desktop app's shared relay, for its chats and Cowork: in a session that also has relay's own tools \(mcp__relay__\*, as in a Code tab session\), use those instead\.$/);
     const desktop = await texts(true, { name: "local-agent-mode-relay-desktop", version: "1.0.0" });
     assert.ok(desktop.instructions.startsWith(`${DESKTOP_STEER} relay reaches other families`), desktop.instructions);
-    assert.deepEqual(Object.keys(desktop.tools).sort(), ["adopt", "approve", "ask", "brief", "cancel", "delegate", "discuss", "merge", "result", "resume", "review", "status"]);
+    assert.deepEqual(Object.keys(desktop.tools).sort(), ["adopt", "approve", "ask", "brief", "cancel", "delegate", "discuss", "merge", "result", "resume", "review", "room", "status"]);
     for (const [name, text] of Object.entries(desktop.tools)) assert.ok(text.startsWith(`${DESKTOP_STEER} `), `${name}: ${text.slice(0, 80)}`);
     // The waiting the texts teach is the capped one.
     assert.match(desktop.tools.status, /relay ends a wait after 50 s; call again to go on waiting/);

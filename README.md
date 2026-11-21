@@ -22,6 +22,11 @@ names them. Relay is one stdio MCP server that you register with each host you u
   delegate to can delegate back across in turn.
 - **Discussion.** `discuss` argues a question out turn by turn, to an agreed conclusion or a stated
   crux.
+- **Rooms.** Connect two conversations you already have open, a Claude Code session and a Codex
+  session say, so they can compare recommendations and reach agreement or state a crux. You create
+  the room in your own terminal (`relay room new`), or say yes when a conversation asks to open one.
+  Relay launches nobody; each conversation keeps its own files, tools, runs and permissions
+  ([Rooms](docs/usage.md#rooms)).
 
 Relay fills the gaps *between* families. For more agents of your own family, your host's native
 subagents are the better tool; relay admits a call that names your own family, and labels it.
@@ -116,8 +121,8 @@ What the installs set up:
   puts this release's shipped Codex pin in place.
 - **Claude desktop app and Cowork** (`relay install claude-desktop --write`, with the app quit): see
   [below](#claude-desktop-app-and-cowork).
-- **ChatGPT desktop app**: its Codex side reads `~/.codex/config.toml`, so `relay install codex`
-  covers it; see [below](#chatgpt-desktop-app). Its Work mode has not been checked with relay.
+- **ChatGPT desktop app**: its Codex side and its Work mode both run on the app's own Codex, which
+  reads `~/.codex/config.toml`, so `relay install codex` covers both; see [below](#chatgpt-desktop-app).
 - Each install also links `~/.local/bin/relay` to relay's launcher (`--no-link` skips that). The npm
   install also puts a `relay` command in npm's bin directory; either runs the same relay
   ([the `relay` command and your PATH](docs/install.md#the-relay-command-and-your-path)).
@@ -154,17 +159,21 @@ a conversation's work, is in [docs/install.md](docs/install.md#claude-desktop-ap
 
 ### ChatGPT desktop app
 
-The ChatGPT desktop app's Codex side reads its MCP servers from `~/.codex/config.toml`, the Codex
-CLI's file, so `relay install codex --write` registers relay there too. Relay does not put approval
+The ChatGPT desktop app's Codex side and its **Work mode** (its counterpart to Claude's Cowork) both
+run on the app's own bundled Codex, which reads its MCP servers from `~/.codex/config.toml`, the
+Codex CLI's file, so `relay install codex --write` registers relay for both. Relay does not put approval
 requests to you as dialogs there (only the app's idle case has been checked, not a request arriving
 mid-task), so they arrive with the conversation's next relay call, and `relay approvals` lists them
 in a terminal. A session that starts relay outside your project passes `cwd`, the project's absolute
 path, as on the Claude desktop app.
 
-The app's **Work mode**, its counterpart to Claude's Cowork, has not been checked with relay: not
-whether it loads Codex's MCP servers, nor whether it runs one relay process for all its
-conversations. Relay keeps Cowork's conversations apart with a session token each carries; it has no
-such handling for Work mode, so treat relay there as unsupported for now.
+Each conversation, on either side, gets a relay process of its own, so conversations stay apart
+without the session token Cowork's shared entry needs (checked with Work mode on 2026-11-19: two
+conversations at once, each with its own process). A Work conversation outside a project runs in a
+folder the app makes for it (under `~/Documents/Codex/`), which is not a git repository: asks and
+read jobs work there, and a write job or merge needs `cwd` set to your repository. The app's ordinary
+chat mode does not run local MCP servers at all (its tools come only from ChatGPT's connectors,
+which OpenAI's servers call), so relay is not available there; use Work mode.
 
 ## Codex
 
@@ -313,8 +322,6 @@ The ones most people meet first. The full list, with what each one covers, is
 - **Write jobs can plant configuration below the top of their worktree** (a nested `.claude/` or
   `.mcp.json`, say), which your own agent then loads after you merge. Review a write job's diff
   before you merge it.
-- **ChatGPT's Work mode is unchecked.** Relay has been used from the ChatGPT desktop app's Codex
-  side, not from its Work mode; see [ChatGPT desktop app](#chatgpt-desktop-app).
 - **Copilot and Grok are experimental**: off by default, not qualified with a signed-in run, and
   launched only with `targets.<id>.experimental: true`. Gemini signs in with an API key, not an
   account login.
@@ -335,14 +342,14 @@ The 1.x compatibility and deprecation promises are in [stable surfaces](docs/sta
 
 ## How it works
 
-Relay is one stdio MCP server installed in each host. It launches Claude and Codex through their own CLIs (`claude -p`, `codex app-server`) under their stored logins, without reading their API keys or account credentials. The [per-harness security table](docs/security-model.md#per-harness-security) records each additional target's login policy; the one API key relay reads is the one you save for the Gemini target, which it hands to Gemini alone. Agents decide for themselves when to delegate, ask, or discuss. Relay enforces two hard limits, depth and concurrency; jobs and turns have no time limit unless you set one.
+Relay is one stdio MCP server installed in each host. It launches Claude and Codex through their own CLIs (`claude -p`, `codex app-server`) under their stored logins, without reading their API keys or account credentials. The [per-harness security table](docs/security-model.md#per-harness-security) records each additional target's login policy; the one API key relay reads is the one you save for the Gemini target, which it hands to Gemini alone. Agents decide for themselves when to delegate, ask, or discuss. For launched agents, relay enforces two hard limits, depth and concurrency; jobs and turns have no time limit unless you set one.
 
 How it is built: [docs/architecture.md](docs/architecture.md).
 
 ## Reference
 
 - [docs/install.md](docs/install.md): what install does; Claude Code, Codex, the Claude desktop app, Gemini CLI, OpenCode, Copilot CLI and Grok Build; the `relay` command and PATH; how relay finds Node and the CLIs; upgrading; uninstalling; installing from a git checkout.
-- [docs/usage.md](docs/usage.md): the tools; delegate, consult, discuss and review; speed; approval requests; extensions; watching and stopping runs; `relay tree`, `cancel` and `clean`.
+- [docs/usage.md](docs/usage.md): the tools; delegate, consult, discuss and review; rooms; speed; approval requests; extensions; watching and stopping runs; `relay tree`, `cancel` and `clean`.
 - [docs/configuration.md](docs/configuration.md): every setting in `~/.config/relay/config.json`, the never floor, the environment launched agents get, Codex's launch checks and its raw network (stage 2).
 - [docs/security-model.md](docs/security-model.md): the per-harness table, and what relay relies on, checks and does not do, including what it keeps on disk and the secrets it cuts from it.
 - [docs/known-limits.md](docs/known-limits.md): every stated limit.

@@ -27,17 +27,28 @@ const inBuild = (rel: string) => QUALIFIED_BUILD.some((entry) => entry.endsWith(
 // exported from this one with both byte for byte, so that its build is the build qualified.
 const BUILD_SOURCES = ["src/", "native/", "tsconfig.json", "scripts/stamp-build.mjs", "scripts/build-sbcheck.mjs", "scripts/check-pack.mjs", "bin/"];
 
-test("build identity: its files and build sources cite no issue by number (repo#N), which a reader of the public repository could not follow", () => {
+/** Lines of the tracked build-identity files and build sources that match `pattern`; null outside a git checkout (an npm install). */
+function exportedLines(pattern: RegExp): string[] | null {
   const tracked = spawnSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8" });
-  if (tracked.status !== 0) return; // not a git checkout (an npm install): nothing to check here
+  if (tracked.status !== 0) return null;
   const covered = (rel: string) => inBuild(rel) || BUILD_SOURCES.some((r) => r.endsWith("/") ? rel.startsWith(r) : rel === r);
   const hits: string[] = [];
   for (const rel of tracked.stdout.split("\0").filter((f) => f && covered(f))) {
     let text: string;
     try { text = fs.readFileSync(path.join(ROOT, rel), "utf8"); } catch { continue; }
-    text.split("\n").forEach((line, i) => { if (/\brelay#\d+/.test(line)) hits.push(`${rel}:${i + 1}: ${line.trim()}`); });
+    text.split("\n").forEach((line, i) => { if (pattern.test(line)) hits.push(`${rel}:${i + 1}: ${line.trim()}`); });
   }
-  assert.deepEqual(hits, [], "describe the case instead of citing the issue: the export cannot rewrite these files");
+  return hits;
+}
+
+test("build identity: its files and build sources cite no issue by number (repo#N), which a reader of the public repository could not follow", () => {
+  const hits = exportedLines(/\brelay#\d+/);
+  if (hits) assert.deepEqual(hits, [], "describe the case instead of citing the issue: the export cannot rewrite these files");
+});
+
+test("build identity: its files and build sources cite no decision by a person's name, which the public export would publish as written", () => {
+  const hits = exportedLines(/\bJack\b/);
+  if (hits) assert.deepEqual(hits, [], "cite the decision by date (\"decided 2026-11-16\"): the export cannot rewrite these files");
 });
 
 test("build identity: the stage-2 test files are exactly the ones the qualification's cases run", () => {

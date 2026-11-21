@@ -10,7 +10,7 @@ import { managedSettings } from "./claude-settings.js";
 import { consentEffect, extensionsOf, personOnly, touchesConfig } from "./extensions.js";
 import { consultHome, foldedPath, inside, insideAnyCase, relayHome, worktreesHome } from "./config.js";
 import { ancestors, db, getNode, getRun, getTurn, newId, nextQueuedTurn, now, runConfig, sleep, tx, turnEnded, workCwd, type NodeRow } from "./db.js";
-import { procStart, sameProcess } from "./procs.js";
+import { processGone, procStart } from "./procs.js";
 import { sessionParams } from "./params.js";
 import { lendSlot } from "./slots.js";
 import { registryPoll } from "./wake.js";
@@ -22,6 +22,8 @@ import { neverHostedWebDisabled, neverPathProblem, type NeverPolicy } from "./ne
 import { authenticateEscalationDecision, escalationDetail, escalationRequestProblem, type DecisionAuthentication } from "./escalation-authority.js";
 import { escalationEffect } from "./escalation-policy.js";
 import { allowOverlayInTransaction, getOverlay, settleOverlayRequestInTransaction } from "./restart-overlay.js";
+import { roomOwnerExposed } from "./room-policy.js";
+import { ROOM_REFUSALS } from "./room-types.js";
 
 // Environment-consent notes use the owning root turn's literal redactor while its in-memory
 // claim exists. No values or redaction hashes enter the request row, including through confirm.
@@ -568,7 +570,23 @@ export function expireRequests(nodeId: string): void {
   db().prepare("UPDATE requests SET status = 'expired', decided_at = ? WHERE node_id = ? AND status = 'pending'").run(now(), nodeId);
 }
 
-export function decide(id: string, allow: boolean, by: string, note?: string, scope: "once" | "job" = "once", authentication?: DecisionAuthentication): Record<string, unknown> {
+/** Trusted context from ops.approve, never inferred from the free-text audit label. */
+export interface ModelApprovalContext { ownerHash: string; userConfirmed: boolean }
+
+/** Room exposure changes only the model's claimed confirmation, not its ordinary judgments. */
+export function modelApprovalPolicy(id: string, context: ModelApprovalContext): { confirmed: boolean; refusal: string | null } {
+  const exposed = roomOwnerExposed(context.ownerHash);
+  const confirmed = context.userConfirmed && !exposed;
+  const state = elicitationState(id);
+  const refusal = !confirmed && (state === "asking" || state === "dismissed")
+    ? exposed ? ROOM_REFUSALS.user_confirmed
+      : "Refused: " + (state === "asking" ? "the user is being asked about this request directly right now" : "the user was shown this request and closed it without answering") +
+        ", so you cannot allow it on your own judgment. Ask them in conversation; if they tell you to allow it, call approve again with user_confirmed: true. You may deny it without asking."
+    : null;
+  return { confirmed, refusal };
+}
+
+export function decide(id: string, allow: boolean, by: string, note?: string, scope: "once" | "job" = "once", authentication?: DecisionAuthentication, modelApproval?: ModelApprovalContext): Record<string, unknown> {
   // Persist additions independently: a rejected/stale decision must never roll back the floor.
   let never: NeverPolicy | undefined;
   if (allow) {
@@ -584,6 +602,12 @@ export function decide(id: string, allow: boolean, by: string, note?: string, sc
     const r = getRequest(id);
     if (!r) return { error: `unknown request ${id}` };
     if (r.status !== "pending") return { error: `request ${id} is already ${r.status}` };
+    if (modelApproval) {
+      // The same writer lock serializes this recheck with exposure recorded before room delivery.
+      const policy = modelApprovalPolicy(id, modelApproval);
+      if (allow && policy.refusal) return { refused: true, reason: policy.refusal };
+      by = policy.confirmed ? "root session, stating that the user confirmed" : "root session";
+    }
     const escalation = r.kind === "escalation" ? escalationDetail(r.detail_json) : null;
     if (r.kind === "escalation") {
       if (!escalation) return { error: "missing canonical escalation request" };
@@ -667,7 +691,9 @@ export function claimElicitation(requestId: string, token: string): boolean {
       return true;
     }
     if (row.token === token) return false;
-    const abandoned = row.outcome === null && !sameProcess(row.pid, row.pid_start);
+    // Abandoned only when its asker is known to be gone: a server ps cannot vouch for at the
+    // moment (a fork refused on a loaded machine) may still have the question on screen.
+    const abandoned = row.outcome === null && processGone(row.pid, row.pid_start);
     if (abandoned || row.reading === "error" || row.reading === "withdrawn") {
       mine();
       return true;
@@ -690,7 +716,9 @@ export function endElicitation(requestId: string, token: string, outcome: string
 export function elicitationState(requestId: string): "asking" | "dismissed" | { unattributed: string } | null {
   const row = elicitation(requestId);
   if (!row) return null;
-  if (row.outcome === null) return sameProcess(row.pid, row.pid_start) ? "asking" : null;
+  // Still asking unless its asker is known to be gone, as for claimElicitation: otherwise a
+  // moment's failed ps would hand the agent a request the user is being asked about, unmarked.
+  if (row.outcome === null) return processGone(row.pid, row.pid_start) ? null : "asking";
   if (row.reading === "unattributed") return { unattributed: row.outcome };
   return row.reading === "dismissed" ? "dismissed" : null;
 }

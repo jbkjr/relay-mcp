@@ -2,7 +2,7 @@
 
 Relay lets coding agents of different model families work together the way native subagents work within one family: a session hands work or a question to another family's agent, and relay launches it, confines it, routes its permission requests back, and reports. It runs on macOS only.
 
-This describes relay 1.2.2: the words its documentation, tool results and `relay doctor` use, what each means, and the words to avoid for it. Names in backticks are what you type in relay's config or a tool call.
+This describes relay 1.3.0: the words its documentation, tool results and `relay doctor` use, what each means, and the words to avoid for it. Names in backticks are what you type in relay's config or a tool call.
 
 ## Who is involved
 
@@ -39,7 +39,7 @@ A program a person works in where relay is installed so its sessions can call re
 _Avoid_: client, frontend
 
 **Root session**:
-The session a person is working in, whose call started a run; the only session that may grant extra permissions or cancel a whole run. Under the Claude desktop app's own entry (`relay-desktop`), several conversations share one relay process; each is a root session of its own, by the session token its model carries (README, "Claude desktop app and Cowork").
+A session the person is working in, as opposed to a launched agent's. It may start runs, grant their extra permissions and cancel them; it need not own a run to join a room. Under the Claude desktop app's own entry (`relay-desktop`), several conversations share one relay process; each is a root session of its own, by the session token its model carries (README, "Claude desktop app and Cowork").
 _Avoid_: main session, parent (parent is relative)
 
 **Launched agent**:
@@ -59,6 +59,24 @@ _Avoid_: session (overloaded), tree
 **Session token**:
 What a conversation on a shared relay (`relay-desktop`) carries on every call as `session_token`, so that relay keeps its runs apart from the other conversations of that process. Relay issues it on the conversation's first call and keeps only its hash. A bearer key: whoever presents it acts as that conversation.
 _Avoid_: session id (an agent's own session has one), conversation id (the host's, which the desktop app does not send)
+
+**Room** (1.3.0):
+A person-authorized local exchange between exactly two root sessions, created at the person's terminal or, on a qualified host, by a conversation on the person's yes in that host's own prompt. It has members and a transcript, owns no run, and is outside the item namespace. Relay launches nobody; same-family pairs are allowed.
+_Avoid_: discussion, thread, channel
+
+**Room member**:
+One ordinal seat, with a relay-written label, bound to an existing relay owner. Re-seating changes its owner, preserving the transcript and turn budget.
+_Avoid_: participant (a discussion role), supervisor
+
+**Room invite**:
+A hashed-at-rest, one-use, ten-minute code issued by a terminal write or, for the second seat of a room a conversation opened on the person's yes, on the person's clipboard (never in the opening conversation's result); always inside a prompt for one seat that only the person's paste delivers. It enrolls a root session and conveys no run rights. A room still waiting for that seat ends when its invite lapses unused; a room's 24 hours count from its creation.
+_Avoid_: room key, adoption ticket
+
+**Room message**:
+Information from a member's model or a terminal, with separate text and relay-written sender fields. It is never consent or an instruction from the person.
+
+**Room cursor**:
+The highest transcript sequence the caller states it has read. Reads do not consume messages. This is a protocol assertion, not proof of model comprehension.
 
 **Item**:
 One entry in a run: a job, thread, discussion, review or participant.

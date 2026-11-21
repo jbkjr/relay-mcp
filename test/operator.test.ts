@@ -25,9 +25,10 @@ const TOOLS = ["delegate", "status", "result", "resume", "cancel", "ask"].map((t
  * (OPERATOR_TOOLS in src/hosts/claude.ts): approve and confirm decide approval requests; adopt moves a
  * whole orphaned run into the connection, the person's to confirm (D9); merge waits for the main
  * conversation's look at the diff; discuss and review keep the main conversation as one side; brief
- * is read by the main conversation before it writes the prompt.
+ * is read by the main conversation before it writes the prompt; room seats the conversation the
+ * person pasted an invite into, not a subagent of it.
  */
-const EXCLUDED = ["approve", "confirm", "adopt", "merge", "discuss", "review", "brief"];
+const EXCLUDED = ["approve", "confirm", "adopt", "merge", "discuss", "review", "brief", "room"];
 
 /**
  * Claude Code's subagent frontmatter (code.claude.com/docs/en/sub-agents, "Supported frontmatter

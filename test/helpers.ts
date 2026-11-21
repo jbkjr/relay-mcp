@@ -101,6 +101,12 @@ export interface Harness {
    * entry per connection (the auth token sent, and the user message's text).
    */
   inbox(): Promise<{ env: Record<string, string>; posts(): { token?: string; text: string }[] }>;
+  /**
+   * The stand-in clipboard every relay process of this harness uses (pbcopy and pbpaste through
+   * RELAY_TEST_SYSTEM_TOOLS, executables.ts systemTool): what it holds now, and every copy made, in
+   * order. No test reaches the person's own clipboard. `failCopies` makes pbcopy exit 1.
+   */
+  clipboard(): { held: string; copies: string[]; failCopies(fail: boolean): void };
   close(): Promise<void>;
 }
 
@@ -535,7 +541,14 @@ export async function harness(rules: Rule[] = [], config: Record<string, unknown
   // would send agents elsewhere, and relay rightly refuses to pass it on (tests that need one set it
   // through extraEnv).
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !k.startsWith("RELAY_") && !hostVar(k) && !HOME_VARS.includes(k)) env[k] = v;
-  Object.assign(env, { HOME: userHome, STUB_TEMP_ROOT: fs.realpathSync(os.tmpdir()) }, extraEnv, { RELAY_HOME: home, RELAY_DEV_MODEL_STUB: "1", STUB_DIR: stub, STUB_SCENARIO: path.join(tmp, "scenario.json") });
+  // Stand-ins for pbcopy and pbpaste, under the system temp directory as testSystemTools requires:
+  // relay's room open puts a prompt on the clipboard, and no test may touch the person's own.
+  const clipDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "relay-clip-")));
+  const clipFile = path.join(clipDir, "clipboard"), clipLog = path.join(clipDir, "copies.jsonl"), clipFail = path.join(clipDir, "fail");
+  fs.writeFileSync(clipFile, "");
+  fs.writeFileSync(path.join(clipDir, "pbcopy"), `#!/bin/sh\n[ -e "${clipFail}" ] && exit 1\ncat > "${clipFile}"\n/usr/bin/python3 -c 'import json,sys; print(json.dumps(open(sys.argv[1]).read()))' "${clipFile}" >> "${clipLog}"\n`, { mode: 0o755 });
+  fs.writeFileSync(path.join(clipDir, "pbpaste"), `#!/bin/sh\ncat "${clipFile}"\n`, { mode: 0o755 });
+  Object.assign(env, { HOME: userHome, STUB_TEMP_ROOT: fs.realpathSync(os.tmpdir()), RELAY_TEST_SYSTEM_TOOLS: clipDir }, extraEnv, { RELAY_HOME: home, RELAY_DEV_MODEL_STUB: "1", STUB_DIR: stub, STUB_SCENARIO: path.join(tmp, "scenario.json") });
   scratchEnv(env);
 
   const clients: Client[] = [];
@@ -682,6 +695,11 @@ export async function harness(rules: Rule[] = [], config: Record<string, unknown
   };
   return {
     home, repo, env,
+    clipboard: () => ({
+      held: fs.readFileSync(clipFile, "utf8"),
+      copies: fs.existsSync(clipLog) ? fs.readFileSync(clipLog, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as string) : [],
+      failCopies: (fail: boolean) => { if (fail) fs.writeFileSync(clipFail, ""); else fs.rmSync(clipFail, { force: true }); },
+    }),
     call: root.call,
     instance,
     log,
@@ -717,6 +735,7 @@ export async function harness(rules: Rule[] = [], config: Record<string, unknown
     inbox,
     close: async () => {
       for (const c of clients) await c.close().catch(() => {});
+      fs.rmSync(clipDir, { recursive: true, force: true });
       for (const s of servers) s.close();
       modelStub.close();
       // Leave nothing running if a test failed part-way.

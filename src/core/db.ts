@@ -179,6 +179,42 @@ CREATE TABLE IF NOT EXISTS slots (
   id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, holder TEXT NOT NULL,
   pid INTEGER NOT NULL, state TEXT NOT NULL, created_at INTEGER NOT NULL
 );
+-- Terminal-authorized rooms own no run; exposures outlive transcript retention.
+CREATE TABLE IF NOT EXISTS rooms (
+  id TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('waiting','open','ended')),
+  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, ended_at INTEGER,
+  revision INTEGER NOT NULL DEFAULT 1, next_ordinal INTEGER NOT NULL DEFAULT 1,
+  turns INTEGER NOT NULL DEFAULT 0, max_turns INTEGER NOT NULL DEFAULT 24, ending_json TEXT,
+  origin TEXT NOT NULL DEFAULT 'unknown' CHECK(origin IN ('terminal','open','unknown')), purpose TEXT
+);
+CREATE TABLE IF NOT EXISTS room_members (
+  room_id TEXT NOT NULL, id TEXT NOT NULL, ordinal INTEGER NOT NULL,
+  generation INTEGER NOT NULL DEFAULT 1, owner_hash TEXT, owner_kind TEXT,
+  pid INTEGER, pid_start TEXT, joined_at INTEGER, joined_sender_json TEXT,
+  last_call_at INTEGER, call_no INTEGER NOT NULL DEFAULT 0,
+  wait_pid INTEGER, wait_start TEXT, wait_nonce TEXT,
+  read_times_json TEXT NOT NULL DEFAULT '[]', reseat_times_json TEXT NOT NULL DEFAULT '[]',
+  PRIMARY KEY(room_id,id), UNIQUE(room_id,ordinal)
+);
+CREATE TABLE IF NOT EXISTS room_bindings (
+  owner_hash TEXT PRIMARY KEY, room_id TEXT NOT NULL, member_id TEXT NOT NULL,
+  generation INTEGER NOT NULL, UNIQUE(room_id,member_id)
+);
+CREATE TABLE IF NOT EXISTS room_invites (
+  code_hash TEXT PRIMARY KEY, room_id TEXT NOT NULL, member_id TEXT NOT NULL,
+  generation INTEGER NOT NULL, expires_at INTEGER NOT NULL,
+  consumed_at INTEGER, consumed_owner_hash TEXT, UNIQUE(room_id,member_id,generation)
+);
+CREATE TABLE IF NOT EXISTS room_messages (
+  room_id TEXT NOT NULL, seq INTEGER NOT NULL, member_id TEXT, sender_owner_hash TEXT,
+  sender_json TEXT NOT NULL, created_at INTEGER NOT NULL, text TEXT NOT NULL,
+  stance TEXT CHECK(stance IN ('continue','agree','crux')), request_id TEXT, args_hash TEXT,
+  PRIMARY KEY(room_id,seq), UNIQUE(room_id,member_id,request_id)
+);
+CREATE TABLE IF NOT EXISTS room_exposures (
+  owner_hash TEXT PRIMARY KEY, given_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS rooms_retention ON rooms(state,ended_at);
 `;
 
 /**
@@ -187,7 +223,7 @@ CREATE TABLE IF NOT EXISTS slots (
  * a relay with a higher version backs the file up before changing it (see docs/UPGRADING.md), and
  * a relay with a lower version refuses the file rather than work on a schema it does not know.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 let handle: DatabaseSync | null = null;
 let backupMade: string | null = null;
@@ -285,6 +321,11 @@ export function db(): DatabaseSync {
     add("turns", "activity_at", "INTEGER");
     add("turns", "usage_json", "TEXT");
     add("turns", "tmp_dir", "TEXT");
+    // Schema 5 is unreleased (1.2.x ships schema 4). Rooms gained how they were created and an
+    // opener's purpose line after earlier builds of this branch wrote schema-5 files; their rooms
+    // read as origin 'unknown' (decided 2026-11-16, Q2).
+    add("rooms", "origin", "TEXT NOT NULL DEFAULT 'unknown' CHECK(origin IN ('terminal','open','unknown'))");
+    add("rooms", "purpose", "TEXT");
     add("turns", "tmp_dev", "INTEGER");
     add("turns", "tmp_ino", "INTEGER");
     add("turns", "grant_json", "TEXT");
@@ -294,7 +335,8 @@ export function db(): DatabaseSync {
   };
   // A schema-4 file written by an unreleased build of this branch keyed launch_leaders on
   // (run_id, leader_pid) alone, keeping only the first start time a reused pid had. Rebuild it under
-  // the current key, carrying every row over (an unknown start becomes ''). Version stays 4.
+  // the current key, carrying every row over (an unknown start becomes ''). This compatibility
+  // repair is independent of the schema-5 room additions.
   const rekeyLaunchLeaders = () => {
     const keyed = () => (d.prepare("PRAGMA table_info(launch_leaders)").all() as { name: string; pk: number }[]).some((c) => c.name === "start" && c.pk > 0);
     if (keyed()) return;

@@ -427,3 +427,45 @@ test("stage-2 driver: item 1 tries the denied port at every spelling of the Mac'
   assert.deepEqual(Q.netProblems(lines, ["127.0.0.1", "::ffff:0.0.0.0", "::1"], ["127.0.0.1"]), ["the denied port at ::ffff:0.0.0.0: CONNECTED, not EPERM", "no result for the denied port at ::1: the check cannot tell"]);
   assert.match(Q.netProblems(Q.netLines("net deny 127.0.0.1 ECONNREFUSED\n"), ["127.0.0.1"], ["127.0.0.1"]).join(), /ECONNREFUSED, not EPERM.*127\.0\.0\.1: no result/);
 });
+
+test("stage-2 driver: item 30 passes only on one broker answer past the hour, delivered once to a turn that completed", () => {
+  const delayMs = 3_601_000, toolTimeoutS = 7500, OK = JSON.stringify({ fixture: "BROKER_OK" });
+  const out = (call_id: string, text: string) => ({ call_id, text });
+  const good = () => ({
+    done: { method: "turn/completed", params: { threadId: "th", turn: { id: "t1", status: "completed" } } },
+    turnId: "t1", delayMs, toolTimeoutS,
+    diag: { calls: 1, durations: [3_601_001], fatal: [] as string[], refusals: [] as string[] },
+    requests: [
+      { conv: 0, step: 0, outputs: [], sent: undefined },
+      { conv: 0, step: 1, outputs: [out("c0-0", "found")], sent: "status" },
+      { conv: 0, step: 2, outputs: [out("c0-0", "found"), out("c0-1", OK)], sent: "message" },
+    ] as any[],
+  });
+  assert.deepEqual(Q.item30Problems(good()), []);
+  const fails = (change: (x: ReturnType<typeof good>) => void, why: RegExp) => {
+    const x = good(); change(x);
+    const p = Q.item30Problems(x);
+    assert.ok(p.some((w: string) => why.test(w)), `${why}: ${JSON.stringify(p)}`);
+  };
+  // Two outputs for the same call in the request that carries the result (output() took the first).
+  fails((x) => { x.requests[2].outputs.push(out("c0-1", OK)); }, /held \[2\] outputs for it, not one each/);
+  // A timeout error first, then the real answer: the first output is not the broker's.
+  fails((x) => { x.requests[2].outputs[1] = out("c0-1", "Error calling tool: timed out"); }, /not the broker's answer/);
+  fails((x) => { x.requests[2].outputs.splice(1, 1); }, /no request to the model carried/);
+  fails((x) => { x.requests.push({ conv: 0, step: 2, outputs: [out("c0-0", "found"), out("c0-1", "other")], sent: "message" }); }, /changed between requests/);
+  fails((x) => { x.requests.splice(2, 0, { conv: 0, step: 1, outputs: [out("c0-0", "found")], sent: "status" }); }, /issued the long call 2 times/);
+  // The turn's terminal status, and the turn it belongs to.
+  fails((x) => { x.done = null as any; }, /the turn did not complete/);
+  fails((x) => { x.done.params.turn = { id: "t1", status: "failed", error: { message: "boom" } } as any; }, /the turn ended failed: boom/);
+  fails((x) => { x.done.params.turn.status = "interrupted"; }, /the turn ended interrupted/);
+  fails((x) => { x.done.params.turn.id = "t0"; }, /not the one turn\/start started/);
+  // The broker: exactly one call, held past the hour, nothing fatal.
+  fails((x) => { x.diag.calls = 2; x.diag.durations.push(3_601_002); }, /received 2 calls, not 1/);
+  fails((x) => { x.diag.durations = [3_599_000]; }, /not one of at least 3601000 ms/);
+  fails((x) => { x.diag.fatal.push("relay could not check the TCP peer of its tools"); }, /fatal failure: relay could not check/);
+  fails((x) => { x.requests.push({ scriptError: "boom" }); }, /the fake model failed: boom/);
+  fails((x) => { x.toolTimeoutS = 3600; }, /tool timeout \(3600 s\) is not beyond/);
+  // Every failed condition is named, not just the first.
+  const x = good(); x.diag.fatal.push("f"); x.done.params.turn.status = "failed";
+  assert.equal(Q.item30Problems(x).length, 2);
+});

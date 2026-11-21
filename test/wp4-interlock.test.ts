@@ -43,7 +43,7 @@ for (const mode of ["local", "stage2"] as const) test(`WP4: ${mode} reservation 
     finishLaunchReservation(f.run, id, { clean: true });
     assert.equal(overlayInterlock(other), null);
     assert.equal(launchReservationProblem(f.run), null);
-    assert.equal((db().prepare("PRAGMA user_version").get() as any).user_version, 4);
+    assert.equal((db().prepare("PRAGMA user_version").get() as any).user_version, 5);
   } finally { f.close(); }
 });
 

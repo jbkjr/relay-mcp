@@ -684,6 +684,60 @@
       }
     }
   },
+  "room": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "open",
+          "join",
+          "send",
+          "wait",
+          "transcript",
+          "close"
+        ]
+      },
+      "purpose": {
+        "type": "string",
+        "maxLength": 1000
+      },
+      "invite": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "cursor": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "text": {
+        "type": "string"
+      },
+      "stance": {
+        "type": "string",
+        "enum": [
+          "continue",
+          "agree",
+          "crux"
+        ]
+      },
+      "request_id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "wait_s": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 21600
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
   "status": {
     "type": "object",
     "properties": {

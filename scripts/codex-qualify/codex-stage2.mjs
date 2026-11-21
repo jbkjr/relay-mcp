@@ -23,7 +23,8 @@
 //   --source <dir>     a codex-rs checkout at this version's tag, for its bundled model catalog;
 //                      without it the catalog is fetched from GitHub at the tag
 //   --items 1,5,10     only these items (the rest are recorded "not run")
-// Writes <scratch dir>/stage2-verdict.json: { ok, state, why, verdictSchema, version, items }.
+// Writes <scratch dir>/stage2-verdict.json: { ok, state, why, verdictSchema, mode, version, items }.
+// stage2-parallel.mjs runs item 30 and the other items as two of these drivers at once (opt-in).
 import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
@@ -703,7 +704,7 @@ async function runCase(ctx, o) {
       ...(url ? { environments: [{ environmentId: "relay", cwd: d.wt }] } : {}),
     });
     await o.beforeTurn?.(e);
-    await e.rpc.request("turn/start", { threadId: e.thread.thread.id, input: [{ type: "text", text: o.prompt ?? "go", text_elements: [] }] });
+    e.turn = await e.rpc.request("turn/start", { threadId: e.thread.thread.id, input: [{ type: "text", text: o.prompt ?? "go", text_elements: [] }] });
     e.broker?.arm();
     e.done = await e.rpc.until((n) => ownTurnCompleted(n, e.thread.thread.id), o.timeoutMs ?? 60_000);
     if (o.during) await o.during(e);
@@ -1861,6 +1862,7 @@ async function qualificationBroker(ctx, d, o = {}) {
     },
     toolHandler: async () => {
       diag.calls++; const at = performance.now();
+      o.onCall?.();
       while (performance.now() - at < (o.delayMs ?? 0)) await delay(Math.max(1, o.delayMs - (performance.now() - at)), undefined, { signal: delayStop.signal });
       diag.durations.push(performance.now() - at);
       // relayServer decorates status by parsing its handler's text as JSON.
@@ -2262,6 +2264,51 @@ async function item22(ctx) {
 /** For a run by hand of one case (debugging). */
 export const internal = { runCase, relayTurn, stage2Flags, BARE };
 
+/** Item 30's long call: conversation 0's second call (a tool search, then the call). */
+export const LONG_CALL = "c0-1";
+/**
+ * The file item 30 writes in its scratch directory once its broker has received the long call: the
+ * fake model, the broker, the executor and the app server are all listening by then. The parallel
+ * coordinator (stage2-parallel.mjs) starts the other items only after it appears.
+ */
+export const ITEM30_IN_FLIGHT = "item30-in-flight.json";
+
+/**
+ * What keeps item 30's evidence from showing one result delivered exactly once beyond the hour:
+ * each failed condition, in words (none when it passed). `done` is the turn/completed notification
+ * (null when none came in time), `turnId` the turn turn/start started, `requests` the fake model's
+ * records, `diag` the broker's diagnostics.
+ */
+export function item30Problems({ done, turnId, requests, diag, delayMs, toolTimeoutS }) {
+  const p = [];
+  if (!(toolTimeoutS * 1000 > delayMs)) p.push(`relay's tool timeout (${toolTimeoutS} s) is not beyond the call's ${delayMs / 1000} s: the check cannot tell`);
+  if (!done) p.push("the turn did not complete");
+  else {
+    const t = done.params?.turn;
+    if (t?.status !== "completed") p.push(`the turn ended ${t?.status ?? "with no status"}${t?.error?.message ? `: ${String(t.error.message).slice(0, 300)}` : ""}`);
+    if (!turnId || t?.id !== turnId) p.push(`the turn that completed (${t?.id ?? "no id"}) is not the one turn/start started (${turnId ?? "no id"})`);
+  }
+  if (diag.calls !== 1) p.push(`the broker received ${diag.calls} calls, not 1`);
+  if (diag.durations.length !== 1 || !(diag.durations[0] >= delayMs)) p.push(`the broker's answers took ${JSON.stringify(diag.durations.map(Math.round))} ms, not one of at least ${delayMs} ms`);
+  if (diag.fatal.length) p.push(`the broker reported a fatal failure: ${diag.fatal.join("; ")}`);
+  const errors = requests.filter((r) => r.scriptError || r.hookError);
+  if (errors.length) p.push(`the fake model failed: ${errors.map((r) => r.scriptError ?? r.hookError).join("; ")}`);
+  const issued = requests.filter((r) => r.conv === 0 && r.step === 1 && r.sent !== "message").length;
+  if (issued !== 1) p.push(`the fake model issued the long call ${issued} times, not once`);
+  const outputs = (r) => (r.outputs ?? []).filter((o) => o.call_id === LONG_CALL);
+  const carrying = requests.filter((r) => outputs(r).length);
+  if (!carrying.length) p.push("no request to the model carried the long call's result");
+  else {
+    // Each later request repeats the conversation, so it must hold the same single output.
+    const counts = carrying.map((r) => outputs(r).length);
+    if (counts.some((n) => n !== 1)) p.push(`the requests that carried the long call's result held ${JSON.stringify(counts)} outputs for it, not one each`);
+    const first = outputs(carrying[0])[0].text;
+    if (!brokerOK(first)) p.push(`the long call's result is not the broker's answer: ${JSON.stringify(String(first ?? "").slice(0, 300))}`);
+    if (carrying.some((r) => outputs(r).some((o) => o.text !== first))) p.push("the long call's result changed between requests");
+  }
+  return p;
+}
+
 // RELAY_TEST_ESCALATION_LONG=readback, for release gates: the readback alone, with the hour-long
 // call recorded as not run, so the verdict can never promote a pin. The full call runs at pin
 // qualification and at a gate whose change touches the broker or the tool timeout.
@@ -2279,9 +2326,12 @@ async function item30(ctx) {
     await runCase(ctx, { name: "i30-readback", env: "relay", broker: { delayMs, toolTimeoutS }, appEnv: relayEnv(ctx), noTurn: true, beforeThread: readback, conversations: () => [] });
     return { readback: part("passed", [], { toolTimeoutS }), long: part("not run", "readback only (RELAY_TEST_ESCALATION_LONG=readback): the hour-long call was not made") };
   }
-  const w = await runCase(ctx, { name: "i30-long", env: "relay", broker: { delayMs, toolTimeoutS }, appEnv: relayEnv(ctx), timeoutMs: delayMs + 120_000,
+  const inFlight = () => fs.writeFileSync(path.join(ctx.dir, ITEM30_IN_FLIGHT), `${JSON.stringify({ at: new Date().toISOString(), pid: process.pid })}\n`);
+  const w = await runCase(ctx, { name: "i30-long", env: "relay", broker: { delayMs, toolTimeoutS, onCall: inFlight }, appEnv: relayEnv(ctx), timeoutMs: delayMs + 120_000,
     beforeThread: readback, conversations: () => [{ calls: [brokerSearch(), brokerCall()] }] });
-  return { long: judged(w.done && brokerOK(w.model.output(0, 1)) && w.broker.diag.calls === 1 && w.broker.diag.durations[0] >= delayMs ? [] : ["result beyond old timeout was not delivered exactly once"], { toolTimeoutS, calls: w.broker.diag.calls, durationMs: w.broker.diag.durations[0] }) };
+  const g = w.broker.diag;
+  const problems = item30Problems({ done: w.done, turnId: w.turn?.turn?.id, requests: w.model.requests, diag: g, delayMs, toolTimeoutS });
+  return { long: judged(problems, { toolTimeoutS, calls: g.calls, durationMs: g.durations[0], turn: w.done?.params?.turn?.status ?? null, fatal: [...g.fatal], refusals: [...g.refusals] }) };
 }
 
 const RUN = { 1: item1, 2: item2, 3: item3, 4: item4, 5: item5, 6: item6, 7: item7, 8: item8, 9: item9, 10: item10, 11: item11, 12: item12, 13: item13, 14: item14, 15: item15, 16: item16, 17: item17, 18: item18, 19: item19, 20: item20, 21: item21, 22: item22, ...Object.fromEntries(Object.keys(ESCALATION_CASES).map(id => [id, async ctx => escalationParts(await runEscalationItem(ctx, id))])), 30: item30 };
@@ -2367,7 +2417,9 @@ export async function qualify({ checkout, dir, version, bin, oldBin = null, sour
   const v = verdictOf(items);
   if (left.length) v.why.push(`left running after the items, stopped by the sweep: ${left.join(", ")}`);
   if (still.length) { v.state = "failed"; v.ok = false; v.why.push(`still running after the sweep: ${still.join(", ")}`); }
-  const verdict = { ...v, version, bin, oldBin, model: ctx.model, relayPath: ctx.relayMissing === undefined ? "not tried" : ctx.relayMissing === null ? "present" : ctx.relayMissing.pending ? `pending: ${ctx.relayMissing.pending}` : ctx.relayMissing.noSession ? `not run: no login session (${ctx.relayMissing.noSession})` : `failed: ${ctx.relayMissing.failed}`, items: v.items };
+  // `mode`: this driver ran its items one after another (stage2-parallel.mjs writes "parallel").
+  // `sweep`: what the sweep found, which the parallel coordinator carries into its own verdict.
+  const verdict = { ...v, mode: "serial", sweep: { left, still }, version, bin, oldBin, model: ctx.model, relayPath: ctx.relayMissing === undefined ? "not tried" : ctx.relayMissing === null ? "present" : ctx.relayMissing.pending ? `pending: ${ctx.relayMissing.pending}` : ctx.relayMissing.noSession ? `not run: no login session (${ctx.relayMissing.noSession})` : `failed: ${ctx.relayMissing.failed}`, items: v.items };
   fs.writeFileSync(path.join(dir, "stage2-verdict.json"), `${JSON.stringify(verdict, null, 2)}\n`);
   return verdict;
 }

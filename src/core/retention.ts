@@ -1,7 +1,7 @@
 // Retention (keep_records_days) and the sweep of relay's own temporary directories: what relay
 // removes of its own accord. Records go only when the person has set how long to keep them, and
-// only for runs nothing can use any more; a temporary directory only once whatever made it is
-// provably gone.
+// only for runs nothing can use any more, or rooms ended past that limit; a temporary directory
+// only once whatever made it is provably gone. Room expiry does not depend on run activity.
 import fs from "node:fs";
 import { launchReservationProblem } from "./restart-overlay.js";
 import net from "node:net";
@@ -18,6 +18,7 @@ import { git } from "./git.js";
 import { groupAlive, pidAlive, procStart, sameProcess } from "./procs.js";
 import { sessionParams } from "./params.js";
 import { dropSkillAssets, nodeHasLiveExecutor, sweepOrphanedExecutors } from "./stage2-executors.js";
+import { roomMaintenanceBusy, roomSweep } from "./rooms.js";
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -204,14 +205,15 @@ export interface Forgotten {
  * run's directories are moved aside in that transaction, and put back if it does not commit, so
  * that none is removed for a run the registry still lists.
  */
-export function forgetOldRuns(days: number, o: { runIds?: string[]; at?: number } = {}): Forgotten {
+export function forgetOldRuns(days: number, o: { runIds?: string[]; at?: number; rebuild?: boolean } = {}): Forgotten {
   const cutoff = (o.at ?? Date.now()) - days * DAY;
   const ids = o.runIds ?? (db().prepare("SELECT id FROM runs ORDER BY created_at").all() as { id: string }[]).map((r) => r.id);
   const out: Forgotten = { forgotten: [], kept: [], left: [] };
   const rebuild: { problem: string | null } = { problem: null };
   overwriting(() => forgetEach(ids, cutoff, out, () => { rebuild.problem = scheduleRebuild() ?? rebuild.problem; }));
   if (rebuild.problem && out.forgotten.length) out.left.push(rebuild.problem);
-  rebuildRegistry(out.left);
+  // maintainRecords rebuilds once, after rooms and runs both.
+  if (o.rebuild !== false) rebuildRegistry(out.left);
   return out;
 }
 
@@ -235,7 +237,7 @@ function overwriting<T>(fn: () => T): T {
 const rebuildMarker = () => path.join(relayHome(), "registry-rebuild");
 
 /**
- * Records that the registry's file is to be rebuilt (rebuildRegistry), before a run's rows are
+ * Records that the registry's file is to be rebuilt (rebuildRegistry), before retained rows are
  * deleted, so that a relay stopped right after deleting them leaves the rebuild to a later clean or
  * housekeeping. Never taken back when nothing was deleted after all: another relay process may have
  * deleted rows meanwhile and relied on it; a rebuild with nothing to drop costs only its time.
@@ -264,6 +266,10 @@ function rebuildRegistry(left: string[]): void {
     .some((run) => stillActive(run, runNodes(run.id)) !== null);
   if (active) {
     left.push("the registry rebuild and log truncation are deferred while runs are active; forgotten records may remain readable in relay.db and relay.db-wal until relay clean or housekeeping next finds all runs idle");
+    return;
+  }
+  if (roomMaintenanceBusy()) {
+    left.push("the registry rebuild and log truncation are deferred while room operations or waits are active; forgotten records may remain readable in relay.db and relay.db-wal until relay clean or housekeeping next finds rooms idle");
     return;
   }
   try {
@@ -320,13 +326,59 @@ function forgetEach(ids: string[], cutoff: number, out: Forgotten, beforeDelete:
   }
 }
 
-/** What relay clean says about records: the policy, and what it did under it. */
+/**
+ * Independent room maintenance; run selection never limits which rooms expire. Rooms are expired
+ * first, on every pass. Their rows are deleted only here (room calls expire but never delete), so
+ * the rebuild is recorded exactly when rows are about to go, and a registry with nothing to forget
+ * is never rebuilt for rooms' sake. The rebuild itself is maintainRecords', after run retention.
+ */
+function maintainRooms(cfg: Pick<RelayConfig, "keep_records_days">) {
+  const left: string[] = [];
+  const { expired } = roomSweep({ keep_records_days: null });
+  const days = cfg.keep_records_days;
+  const due = days !== null && Number.isFinite(days) && days >= 0
+    && db().prepare("SELECT 1 FROM rooms WHERE state = 'ended' AND ended_at <= ? LIMIT 1").get(Date.now() - days * DAY) !== undefined;
+  if (!due) return { expired, deleted: [] as string[], left };
+  const problem = scheduleRebuild();
+  if (problem) left.push(problem);
+  const swept = roomSweep({ keep_records_days: days });
+  return { expired: [...expired, ...swept.expired], deleted: swept.deleted as string[], left };
+}
+
+/**
+ * One retention pass, for relay clean and daily housekeeping: rooms, then runs where
+ * keep_records_days is set, then at most one registry rebuild for both. A rebuild an earlier pass
+ * deferred is finished whatever the policy has become since. A room sweep that fails (the
+ * registry's write lock held past the busy timeout, say) is reported, and run retention and the
+ * rebuild still follow. What the rebuild could not do is said once: with rooms when they owed it
+ * (rows deleted now, or a rebuild still pending from before), otherwise with runs.
+ */
+function maintainRecords(cfg: Pick<RelayConfig, "keep_records_days">, runIds?: string[]) {
+  let rooms: ReturnType<typeof maintainRooms>;
+  try {
+    rooms = maintainRooms(cfg);
+  } catch (err) {
+    rooms = { expired: [], deleted: [], left: [`rooms were not swept (${(err as Error).message})`] };
+  }
+  const roomsOwe = fs.existsSync(rebuildMarker());
+  const runs = cfg.keep_records_days === null ? null : forgetOldRuns(cfg.keep_records_days, { runIds, rebuild: false });
+  rebuildRegistry(roomsOwe || !runs ? rooms.left : runs.left);
+  return { rooms, runs };
+}
+
+/** What relay clean says about records: the policies, and what it did under them. */
 export function recordsReport(cfg: Pick<RelayConfig, "keep_records_days">, runIds?: string[]): Record<string, unknown> {
-  if (cfg.keep_records_days === null) return { records_note: "kept: keep_records_days is not set, so relay keeps every run's prompts, logs and transcripts until you delete them" };
-  const r = forgetOldRuns(cfg.keep_records_days, { runIds });
+  const { rooms, runs: r } = maintainRecords(cfg, runIds);
+  const roomReport = {
+    rooms_note: `rooms expire independently: waiting rooms at invite or absolute expiry, open rooms at absolute expiry; ${cfg.keep_records_days === null ? "transcripts kept indefinitely (keep_records_days is not set)" : `transcripts forgotten ${cfg.keep_records_days} days after ending (keep_records_days)`}; room exposure hashes stay indefinitely; backups and host histories are outside deletion guarantees`,
+    rooms_expired: rooms.expired, rooms_forgotten: rooms.deleted,
+    ...(rooms.left.length ? { rooms_left: rooms.left } : {}),
+  };
+  if (!r) return { records_note: "kept: keep_records_days is not set, so relay keeps every run's prompts, logs and transcripts until you delete them", ...roomReport };
   return {
     records_note: `forgotten after ${cfg.keep_records_days} days without activity (keep_records_days)`,
     records_forgotten: r.forgotten, records_kept: r.kept, ...(r.left.length ? { records_left: r.left } : {}),
+    ...roomReport,
   };
 }
 
@@ -657,9 +709,9 @@ export async function housekeepDaily(cfg: Pick<RelayConfig, "keep_records_days">
   } catch (err) {
     console.error(`relay: leftover temporary directories were not swept: ${(err as Error).message}`);
   }
-  if (cfg.keep_records_days === null) return;
-  const r = forgetOldRuns(cfg.keep_records_days);
-  if (r.forgotten.length || r.left.length) console.error(`relay: keep_records_days ${cfg.keep_records_days}: forgot ${r.forgotten.join(", ") || "nothing"}${r.left.length ? `; ${r.left.join("; ")}` : ""}`);
+  const { rooms, runs: r } = maintainRecords(cfg);
+  if (rooms.expired.length || rooms.deleted.length || rooms.left.length) console.error(`relay: rooms: expired ${rooms.expired.join(", ") || "none"}; forgot ${rooms.deleted.join(", ") || "none"}${rooms.left.length ? `; ${rooms.left.join("; ")}` : ""}`);
+  if (r && (r.forgotten.length || r.left.length)) console.error(`relay: keep_records_days ${cfg.keep_records_days}: forgot ${r.forgotten.join(", ") || "nothing"}${r.left.length ? `; ${r.left.join("; ")}` : ""}`);
 }
 
 /** Whether something listens on a Unix socket. A socket that neither refuses nor answers within 2 s counts as listening. */

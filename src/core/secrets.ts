@@ -13,6 +13,7 @@
 // Names are read in camelCase as in snake_case (nameWords).
 
 import { AsyncLocalStorage } from "node:async_hooks";
+import { ROOM_INVITE_IN_TEXT, ROOM_INVITE_REDACTION } from "./room-types.js";
 
 // Each turn keeps its generated credentials until its results and errors have been persisted,
 // including after the proxy and broker close. Concurrent turns never share these values.
@@ -103,8 +104,11 @@ const PROXY_NAME = /^(?:https?|all|ftp)_proxy$/i;
  * neither keeps nor returns it.
  */
 export const SESSION_TOKEN_SHAPE = /rs1_[0-9a-f]{56}/i;
+/** Room text may carry neither enrollment invites nor the existing shared-session bearer key. */
+export const roomCredentialInText = (text: string): boolean => ROOM_INVITE_IN_TEXT.test(text) || SESSION_TOKEN_SHAPE.test(text);
 const SHAPES: [RegExp, (match: string) => boolean][] = [
   [new RegExp(SESSION_TOKEN_SHAPE.source, "gi"), () => true],
+  [ROOM_INVITE_REDACTION, () => true],
   [/\bsk-ant-[A-Za-z0-9_-]{20,}/g, () => true],
   [/\bsk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{32,}/g, (m) => /\d/.test(m.replace(/^sk-(?:proj-|svcacct-|admin-)?/, ""))],
   // xAI's official SDK uses (?i)xai-[a-z0-9]{20,80}; keep longer matches whole too, as above.

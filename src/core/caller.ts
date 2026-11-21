@@ -113,6 +113,12 @@ export interface HostView {
    * confirm, can the person allow a person-only request (docs/extensions.md).
    */
   personDialog?: boolean;
+  /**
+   * Revision 3 rooms: set only where relay may ask the person to open a room through the host's
+   * own prompt (mcp/host.ts roomOpenDialog); `roomOpenWithheld` says why not, otherwise.
+   */
+  roomOpen?: { surface: "claudeCli" | "codexCli"; keepsForm: boolean; why: string };
+  roomOpenWithheld?: string;
 }
 
 /**

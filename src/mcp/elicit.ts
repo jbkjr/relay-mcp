@@ -11,6 +11,7 @@ import type { ElicitAnswer } from "../core/caller.js";
 import { runConfig } from "../core/db.js";
 import { shown } from "../core/shown.js";
 import { lateAnswer } from "../core/watch.js";
+import { ROOM_JOIN_NO, ROOM_JOIN_YES, ROOM_OPEN_NO, ROOM_OPEN_YES, type RoomOpenAnswer } from "../core/room-types.js";
 import type { HostProfile } from "./host.js";
 
 /** The longest delay a Node timer takes (a longer one fires at once): about 24.8 days. */
@@ -210,4 +211,71 @@ export function questionsThrough(server: McpServer): (profile: HostProfile) => (
   };
 
   return elicitThrough;
+}
+
+/**
+ * Revision 3 (docs/design-rooms.md): how relay reads the host's answer to its room-open prompt.
+ * Only an accept whose content is exactly { decision: ROOM_OPEN_YES } is the person's yes, and
+ * only on a host whose prompt is qualified (host.ts roomOpenDialog; the caller checks that).
+ * Everything else opens nothing: a decline, a cancel (Esc, or the host's own), a timeout, the
+ * caller's cancellation, an error, or an accept that is not exactly what the form offered.
+ */
+export function readRoomOpenAnswer(res: { action: string; content?: Record<string, unknown> }, yes: string = ROOM_OPEN_YES, no: string = ROOM_OPEN_NO): RoomOpenAnswer {
+  if (res.action === "accept") {
+    const content = res.content ?? {};
+    const keys = Object.keys(content);
+    if (keys.length === 1 && content.decision === yes) return "yes";
+    if (keys.length === 1 && content.decision === no) return "declined";
+    return "unverified";
+  }
+  if (res.action === "decline") return "declined";
+  if (res.action === "cancel") return "cancelled";
+  return "unverified";
+}
+
+const ROOM_QUESTIONS = {
+  open: { request: "room-open", yes: ROOM_OPEN_YES, no: ROOM_OPEN_NO, title: "Open a room?" },
+  join: { request: "room-join", yes: ROOM_JOIN_YES, no: ROOM_JOIN_NO, title: "Join this room?" },
+} as const;
+
+/**
+ * Puts relay's fixed room-open question to the person through the host and reads the answer.
+ * Every outcome is logged by kind only (elicitation.log); no invite appears in it.
+ */
+export function roomOpenThrough(server: McpServer, why: string) {
+  return roomQuestionThrough(server, why, "open");
+}
+
+/** The same for a room question of either kind: open (revision 3, part B) or join (option B). */
+export function roomQuestionThrough(server: McpServer, why: string, kind: keyof typeof ROOM_QUESTIONS) {
+  const q = ROOM_QUESTIONS[kind];
+  return async (message: string, opts: { signal?: AbortSignal; timeoutMs?: number }): Promise<RoomOpenAnswer> => {
+    const asked = Date.now();
+    const record = (action: string, reading: RoomOpenAnswer) => logElicitation({ request: q.request, host: why, action, ms: Date.now() - asked, reading });
+    if (opts.signal?.aborted) { record("aborted", "cancelled"); return "cancelled"; }
+    try {
+      const res = await server.server.elicitInput({
+        message,
+        requestedSchema: {
+          type: "object",
+          // The safe choice first: a form that preselects it opens nothing on a stray Enter.
+          properties: { decision: { type: "string", enum: [q.no, q.yes], title: q.title } },
+          required: ["decision"],
+        },
+      // No deadline of relay's own (decided 2026-11-16): the question stays until the person
+      // answers, the caller cancels or the host ends the call. The SDK's 60 s default would
+      // otherwise end it, so the longest timer Node takes stands in for none.
+      }, { timeout: opts.timeoutMs ?? MAX_TIMER_MS, ...(opts.signal ? { signal: opts.signal } : {}) });
+      const reading = readRoomOpenAnswer(res, q.yes, q.no);
+      record(res.action, reading);
+      return reading;
+    } catch (err) {
+      // The SDK reports the caller's abort as a timeout too, so look at the signal first.
+      if (opts.signal?.aborted) { record("aborted", "cancelled"); return "cancelled"; }
+      if (err instanceof McpError && err.code === ErrorCode.RequestTimeout) { record("timeout", "timed_out"); return "timed_out"; }
+      if (err instanceof McpError && err.code === ErrorCode.InvalidParams && /requested schema/.test(err.message)) { record("accept", "unverified"); return "unverified"; }
+      record("error", "unavailable");
+      return "unavailable";
+    }
+  };
 }

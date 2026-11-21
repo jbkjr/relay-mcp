@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "tables": [
     {
       "name": "calls",
@@ -32,6 +32,30 @@
     {
       "name": "requests",
       "sql": "CREATE TABLE requests (\n  id TEXT PRIMARY KEY, run_id TEXT NOT NULL, node_id TEXT NOT NULL, kind TEXT NOT NULL,\n  summary TEXT NOT NULL, reason TEXT, detail_json TEXT, status TEXT NOT NULL,\n  decided_by TEXT, note TEXT, created_at INTEGER NOT NULL, decided_at INTEGER\n, scope TEXT, turn_id INTEGER)"
+    },
+    {
+      "name": "room_bindings",
+      "sql": "CREATE TABLE room_bindings (\n  owner_hash TEXT PRIMARY KEY, room_id TEXT NOT NULL, member_id TEXT NOT NULL,\n  generation INTEGER NOT NULL, UNIQUE(room_id,member_id)\n)"
+    },
+    {
+      "name": "room_exposures",
+      "sql": "CREATE TABLE room_exposures (\n  owner_hash TEXT PRIMARY KEY, given_at INTEGER NOT NULL\n)"
+    },
+    {
+      "name": "room_invites",
+      "sql": "CREATE TABLE room_invites (\n  code_hash TEXT PRIMARY KEY, room_id TEXT NOT NULL, member_id TEXT NOT NULL,\n  generation INTEGER NOT NULL, expires_at INTEGER NOT NULL,\n  consumed_at INTEGER, consumed_owner_hash TEXT, UNIQUE(room_id,member_id,generation)\n)"
+    },
+    {
+      "name": "room_members",
+      "sql": "CREATE TABLE room_members (\n  room_id TEXT NOT NULL, id TEXT NOT NULL, ordinal INTEGER NOT NULL,\n  generation INTEGER NOT NULL DEFAULT 1, owner_hash TEXT, owner_kind TEXT,\n  pid INTEGER, pid_start TEXT, joined_at INTEGER, joined_sender_json TEXT,\n  last_call_at INTEGER, call_no INTEGER NOT NULL DEFAULT 0,\n  wait_pid INTEGER, wait_start TEXT, wait_nonce TEXT,\n  read_times_json TEXT NOT NULL DEFAULT '[]', reseat_times_json TEXT NOT NULL DEFAULT '[]',\n  PRIMARY KEY(room_id,id), UNIQUE(room_id,ordinal)\n)"
+    },
+    {
+      "name": "room_messages",
+      "sql": "CREATE TABLE room_messages (\n  room_id TEXT NOT NULL, seq INTEGER NOT NULL, member_id TEXT, sender_owner_hash TEXT,\n  sender_json TEXT NOT NULL, created_at INTEGER NOT NULL, text TEXT NOT NULL,\n  stance TEXT CHECK(stance IN ('continue','agree','crux')), request_id TEXT, args_hash TEXT,\n  PRIMARY KEY(room_id,seq), UNIQUE(room_id,member_id,request_id)\n)"
+    },
+    {
+      "name": "rooms",
+      "sql": "CREATE TABLE rooms (\n  id TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('waiting','open','ended')),\n  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, ended_at INTEGER,\n  revision INTEGER NOT NULL DEFAULT 1, next_ordinal INTEGER NOT NULL DEFAULT 1,\n  turns INTEGER NOT NULL DEFAULT 0, max_turns INTEGER NOT NULL DEFAULT 24, ending_json TEXT,\n  origin TEXT NOT NULL DEFAULT 'unknown' CHECK(origin IN ('terminal','open','unknown')), purpose TEXT\n)"
     },
     {
       "name": "runs",

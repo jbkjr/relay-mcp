@@ -7,7 +7,8 @@ import { recordStart, addContribution, callerLabel, familiesOf } from "./familie
 import { targetDef, targetLabel } from "../targets/index.js";
 import type { Grant } from "../backends/types.js";
 import { dirIdentity } from "../confine/index.js";
-import { decide, elicitationState, expireRequests, getRequest, requestView } from "./approvals.js";
+import { decide, expireRequests, getRequest, modelApprovalPolicy, requestView } from "./approvals.js";
+import { roomOwnerHash } from "./room-policy.js";
 import { noteCall, once, type CallRow } from "./calls.js";
 import { recordEnvironmentRequest } from "./env-broker.js";
 import {
@@ -782,16 +783,12 @@ export function approve(inst: Instance, a: { request_id: string; decision: "allo
   if (a.decision === "allow" && requestRunsRelayCommand(r, requester ? workCwd(requester) : inst.cwd)) {
     return refused("this command runs relay's CLI, so only the person can allow it, through the host's approval dialog, confirm, or `relay approve` in their own terminal. You may deny it.");
   }
-  // Where the user has been asked directly, their answer is the one that counts. The agent can
-  // still pass on an answer they gave in conversation, by saying so.
-  const state = elicitationState(r.id);
-  if (a.decision === "allow" && !a.user_confirmed && (state === "asking" || state === "dismissed")) {
-    return refused(
-      (state === "asking" ? "the user is being asked about this request directly right now" : "the user was shown this request and closed it without answering") +
-        ", so you cannot allow it on your own judgment. Ask them in conversation; if they tell you to allow it, call approve again with user_confirmed: true. You may deny it without asking.",
-    );
-  }
-  return decide(a.request_id, a.decision === "allow", a.user_confirmed ? "root session, stating that the user confirmed" : "root session", a.note, a.scope ?? "once", escalationDecisionAuthentication(r, "owning-run-root", inst));
+  // Where the person has been asked directly, a model's claim of their answer counts only if
+  // this owner has not received room text. Recheck under decide's writer lock before committing.
+  const modelApproval = { ownerHash: roomOwnerHash(inst.token), userConfirmed: a.user_confirmed === true };
+  const policy = modelApprovalPolicy(r.id, modelApproval);
+  if (a.decision === "allow" && policy.refusal) return { refused: true, reason: policy.refusal };
+  return decide(a.request_id, a.decision === "allow", policy.confirmed ? "root session, stating that the user confirmed" : "root session", a.note, a.scope ?? "once", escalationDecisionAuthentication(r, "owning-run-root", inst), modelApproval);
 }
 
 /**

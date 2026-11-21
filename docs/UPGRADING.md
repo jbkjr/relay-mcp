@@ -106,6 +106,81 @@ What restoring loses: the registry's record of whatever ran under the newer rele
 Newest first. Relay 1.1.4 and earlier came before the first public release; their notes are kept
 because later notes and the reference docs point into them.
 
+## Relay 1.3.0
+
+Rooms: a new `room` tool and `relay room` commands that let two conversations you already have
+open, a Claude Code session and a Codex session say, exchange messages until they agree or state
+a crux ([Rooms](usage.md#rooms)). No config key or host registration changes. **The registry moves
+from schema 4 to schema 5, and schema 5 needs every relay server stopped before the upgrade and
+restarted afterwards**, whether or not you use rooms (below). What changes:
+
+- **Rooms.** Create one in your own terminal with `relay room new`, which prints one invitation
+  prompt per conversation and, on macOS, offers each on the clipboard in turn; paste each into the
+  conversation you mean. In interactive Claude Code in a terminal and the Codex CLI, a conversation
+  can instead ask you to open a room, in that host's own dialog; on your yes it takes the first
+  seat, and the second seat's prompt goes to your clipboard, never to the model. On those hosts a
+  join asks you first too. A room carries information only, at most 24 messages, for at most 24
+  hours. Relay launches nobody, and each conversation keeps its own runs and permissions.
+- **`relay room`** lists rooms (`list`), prints a transcript (`<id> --print`), follows one and adds
+  terminal lines (`<id>`, `--say`), and re-seats or closes one (`--reseat member-1|member-2`,
+  `--close`). Writes need your own interactive terminal.
+- **An approval change for conversations that have read room text** (below).
+- **`relay clean` and daily housekeeping** also expire rooms, and delete an ended room's transcript
+  `keep_records_days` after it ended (never, when the setting is unset).
+- **`relay doctor`** has a "rooms" line saying how seats survive restarts and where a conversation
+  can open a room.
+- **A question relay is putting to you stays yours while `ps` briefly fails.** When the machine
+  refused to start `ps` (under heavy load, say), relay took the server asking the question for gone:
+  a waiting call could then hand the agent a request you were being asked about, without
+  `user_is_being_asked`, and another relay server could ask you the same question again. Relay now
+  counts the asker gone only when it can show that it is.
+
+### Upgrading to 1.3.0: stop every relay server first
+
+Schema 5 adds six tables (`rooms`, `room_members`, `room_bindings`, `room_invites`,
+`room_messages` and `room_exposures`) and keeps every existing row. As with any migration, relay
+backs the registry up first ([The registry](#the-registry)). An older relay refuses a schema-5
+file when it opens it, but a relay server that is already running keeps its open connection
+without checking the version again, so it cannot be relied on to refuse. So:
+
+1. **Stop all of relay.** Let work finish or cancel it, keeping the branches and worktrees of
+   finished write jobs you want. Quit every session that uses relay, and the Claude desktop app
+   (both of its shared relay processes), and make sure no relay process is left:
+   `pgrep -fl 'dist/cli.js (mcp|worker)'` prints nothing. Do this before the new release's
+   installer, or any command of the new release, opens the registry.
+2. **Install 1.3.0 and run `relay install <host> --write`** for each host you use, as in
+   [How to upgrade](#how-to-upgrade). The first one migrates the registry, backing it up as
+   `relay.db.backup-v4-<time>-<pid>`, and prints and records the backup's path; keep it until you
+   are sure you will not go back. `sqlite3 "file:$HOME/.local/state/relay/relay.db?mode=rw" 'PRAGMA user_version'`
+   then prints 5. A new registry needs no backup.
+3. **Restart every session**, and reopen the desktop app, so that every relay server runs 1.3.0.
+
+A room seat held by a Codex or Claude Code session belongs to that session's relay server: when
+the server restarts, the seat is lost, and `relay room <id> --reseat member-1` (or `member-2`)
+prints a replacement prompt. A seat held by a desktop chat or Cowork session continues with its
+session token, in the same relay home.
+
+### The approval change
+
+Once a conversation's relay owner has received room text from the other member or from a
+terminal, relay records that (as a hash of the owner, kept after the transcript is deleted), and
+`user_confirmed: true` on that owner's `approve` then counts for nothing: it no longer allows a
+request you are being asked about (`asking`) or one whose question you closed (`dismissed`), and no
+longer earns the audit label of a confirmation the agent claimed. Answer those requests yourself,
+through relay's dialog, `confirm` or `relay approve` in a terminal. Everything else `approve` could
+do stays: the root's own judgments where they were allowed, denials and grants; person-only
+requests keep their existing restrictions. This is not a ban on approvals or grants in a
+conversation that has been in a room, it does not make terminal text your consent, and it does not
+follow text copied to another conversation.
+
+### Rollback from 1.3.0
+
+Follow [Rollback](#rollback), stopping every relay server as for the upgrade, and also close any
+`relay room <id>` you are following in a terminal, which holds the registry open as well:
+`pgrep -fl 'dist/cli.js (mcp|worker|room)'` must print nothing. Then restore the schema-4 backup the
+upgrade made (`PRAGMA user_version` on it prints 4). Rooms and their transcripts, like everything
+else recorded after the backup, are lost from the registry.
+
 ## Relay 1.2.2
 
 A fix release. No config or registry migration is needed, and Codex pins in your store keep working.
