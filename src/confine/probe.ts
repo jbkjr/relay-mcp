@@ -28,6 +28,13 @@ import { isGroupSignalRefusal, sendGroupSignal } from "../core/procs.js";
 const CANARY = path.join(path.dirname(fileURLToPath(import.meta.url)), "canary.js");
 /** The whole canary run may take this long before the launch is refused. It takes about half a second when idle; a short limit refused turns on a busy Mac. */
 const CANARY_TIMEOUT_MS = 30000;
+/**
+ * The canary's own deadline, well inside CANARY_TIMEOUT_MS: by then it reports what every step got,
+ * a step still running as "timeout". A stalled step then refuses the launch under its own name, and
+ * an escape elsewhere is still reported, rather than the whole run timing out with no results (seen
+ * once on GitHub's macOS runners, 2026-11-21).
+ */
+const CANARY_DEADLINE_MS = 20000;
 /** How long a connect or a lookup the sandbox should refuse at once may hang before it counts as not refused. */
 const STEP_TIMEOUT_MS = 1000;
 /** Never routed (TEST-NET-1): a connect there is refused by the sandbox at once, or it hangs. */
@@ -74,7 +81,7 @@ export interface ProbeReport {
   /** Wall time of the whole check, setup and cleanup included. */
   ms: number;
   results: ProbeResult[];
-  /** The first probe that failed, when one did. */
+  /** The probe that failed, when one did: the first escape (a refusal expected, "allowed" got), else the first failure. */
   failed?: ProbeResult;
 }
 
@@ -750,7 +757,7 @@ export async function probeBoundary(
     const stopped = () => new ConfinementRefused("stopped", "the turn was stopped while relay was probing its sandbox, so it does not launch the harness");
     /** Runs the canary with `plan` under `l`'s confinement; what each step got. */
     const canary = async (l: ConfinedLaunch, plan: Record<string, CanaryStep>): Promise<Record<string, string>> => {
-      const run = l.rewrap(process.execPath, [CANARY, JSON.stringify(plan)]);
+      const run = l.rewrap(process.execPath, [CANARY, JSON.stringify(plan), String(CANARY_DEADLINE_MS)]);
       if (opts.signal?.aborted) throw stopped();
       const outcome = await new Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean }>((resolve) => {
         // Detached, as harnesses are launched: a new session with no controlling terminal, and a process
@@ -921,7 +928,8 @@ export async function probeBoundary(
     if (scratchDir) fs.rmSync(scratchDir, { recursive: true, force: true });
     await unsems;
   }
-  const failed = results.find((r) => !r.ok);
+  // An escape outranks an inconclusive result (a timeout, say): it is the finding that matters.
+  const failed = results.find((r) => !r.ok && r.expect === "deny" && r.got.startsWith("allowed")) ?? results.find((r) => !r.ok);
   return { ok: !failed, profile: launch.fingerprint, relay: VERSION, os: osBuild(), ms: Math.round(performance.now() - started), results, ...(failed ? { failed } : {}) };
 }
 
@@ -1067,7 +1075,7 @@ function launchdListed(label: string): boolean {
   }
 }
 
-/** Throws ConfinementRefused naming the first failed probe. */
+/** Throws ConfinementRefused naming the failed probe (ProbeReport.failed). */
 export function assertProbes(report: ProbeReport): void {
   const f = report.failed;
   if (!f) return;

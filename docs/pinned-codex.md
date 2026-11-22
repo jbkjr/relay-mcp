@@ -109,7 +109,7 @@ the maintainer's qualification of one Codex release with exactly that relay buil
 {
   "format": "relay-shipped-codex-pin-v1",
   "codex": { "version": "0.169.0", "npmIntegrity": "sha512-…" },
-  "relay": { "scheme": "relay-build-v2", "version": "1.3.0", "sha256": "…" }
+  "relay": { "scheme": "relay-build-v2", "version": "1.3.1", "sha256": "…" }
 }
 ```
 

@@ -55,11 +55,17 @@ test("family policy: every start mode admits and labels own family; strict refus
     try {
       const root = await h.instance({ args: ["--host", "claude"] });
       for (const [tool, args] of [["delegate", { task: "same", mode: "read", background: false }], ["ask", { message: "same" }], ["discuss", { topic: "same", message: "AGREE: done" }], ["review", { target: "README.md", reviewer: "claude" }]] as const) {
+        const claudeStarts = () => h.starts().filter((s) => s.target === "claude");
+        const before = claudeStarts().length;
         const r = await root.call(tool, { ...(tool === "review" ? {} : { target: "claude" }), ...args });
         if (same_family === "refuse") { assert.equal(r.refused, true, JSON.stringify(r)); continue; }
         assert.equal(r.families.relation, "same-family", JSON.stringify(r));
         assert.ok(r.families.note);
-        if (tool === "discuss") assert.match(h.starts().filter((s) => s.target === "claude").at(-1)!.prompt, /another Claude agent, of your own family \(Anthropic\)/);
+        // discuss can answer before its other side's start is logged: wait for that start, then read it.
+        if (tool === "discuss") {
+          await until(() => claudeStarts().length > before, 10_000, "discuss's start");
+          assert.match(claudeStarts()[before].prompt, /another Claude agent, of your own family \(Anthropic\)/);
+        }
         if (tool === "review") { assert.match(r.next, /same-family review/); await root.call("review", { review_id: r.review_id, skip_own: true }); }
       }
       if (same_family === "refuse") assert.equal(h.starts().length, 0);

@@ -1,5 +1,5 @@
 {
   "name": "relay",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Reach coding agents of other families (Codex from Claude Code, Claude from Codex) through the relay MCP server: delegate, consult, discuss, review."
 }

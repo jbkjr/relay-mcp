@@ -6,7 +6,7 @@
  * It judges nothing; probe.ts does. Node built-ins only, so it starts fast; the few system calls
  * Node has no binding for go through osascript's JavaScript bridge (NativeCheck), in one process.
  *
- * usage: node canary.js '<plan JSON>'
+ * usage: node canary.js '<plan JSON>' [deadline ms]
  */
 import { execFileSync, spawn } from "node:child_process";
 import dgram from "node:dgram";
@@ -497,6 +497,18 @@ const names = [
   ...Object.keys(plan).filter((n) => plan[n].kind !== "exec" && plan[n].kind !== "native"),
 ];
 const nativeChecks = Object.fromEntries(Object.entries(plan).flatMap(([n, s]) => (s.kind === "native" ? [[n, s.check]] : [])));
-const [outcomes, nativeOutcomes] = await Promise.all([Promise.all(names.map((n) => step(plan[n]))), native(nativeChecks)]);
-process.stdout.write(JSON.stringify({ ...Object.fromEntries(names.map((n, i) => [n, outcomes[i]])), ...nativeOutcomes }) + "\n");
-process.exit(0);
+// The canary's own deadline (argv[3], ms; relay sets it below its limit for the whole run): a step
+// still unsettled then is reported as "timeout", which no probe accepts as a denial, and every step
+// that did settle is still reported. One stalled step then refuses the launch under its own name,
+// and an escape elsewhere is still seen, instead of the whole run timing out with no results.
+const deadlineMs = Number(process.argv[3]);
+const got: Record<string, string> = {};
+const settled = Promise.all([
+  Promise.all(names.map((n) => step(plan[n]).then((o) => void (got[n] = o)))),
+  native(nativeChecks).then((o) => void Object.assign(got, o)),
+]);
+if (Number.isFinite(deadlineMs) && deadlineMs > 0) await Promise.race([settled, new Promise((r) => setTimeout(r, deadlineMs))]);
+else await settled;
+for (const n of [...names, ...Object.keys(nativeChecks)]) got[n] ??= "timeout";
+// Exit once the line is written: on macOS a pipe's writes are asynchronous, and exiting at once can lose it.
+process.stdout.write(JSON.stringify(got) + "\n", () => process.exit(0));

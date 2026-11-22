@@ -106,6 +106,19 @@ What restoring loses: the registry's record of whatever ran under the newer rele
 Newest first. Relay 1.1.4 and earlier came before the first public release; their notes are kept
 because later notes and the reference docs point into them.
 
+## Relay 1.3.1
+
+A fix release. No config or registry migration is needed (the registry stays at schema 5), and Codex
+pins in your store keep working.
+
+- **A sandbox check that stalls no longer hides an escape.** Before a confined launch, relay runs a
+  canary inside the sandbox that tries what the sandbox must refuse. On a heavily loaded Mac one of
+  its steps could hang until relay's 30-second limit, and the launch was then refused as "canary"
+  with no results, so a step that did get through went unnamed. The canary now reports at its own
+  20-second deadline: a step still running then counts as "timeout", which is never taken as a
+  refusal, and every other step's result is kept. When one step escaped, the refusal names that step
+  first. A stalled step still refuses the launch, as before.
+
 ## Relay 1.3.0
 
 Rooms: a new `room` tool and `relay room` commands that let two conversations you already have

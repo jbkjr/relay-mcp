@@ -2,7 +2,7 @@
 
 Relay lets coding agents of different model families work together the way native subagents work within one family: a session hands work or a question to another family's agent, and relay launches it, confines it, routes its permission requests back, and reports. It runs on macOS only.
 
-This describes relay 1.3.0: the words its documentation, tool results and `relay doctor` use, what each means, and the words to avoid for it. Names in backticks are what you type in relay's config or a tool call.
+This describes relay 1.3.1: the words its documentation, tool results and `relay doctor` use, what each means, and the words to avoid for it. Names in backticks are what you type in relay's config or a tool call.
 
 ## Who is involved
 

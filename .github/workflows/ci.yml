@@ -45,5 +45,14 @@ jobs:
       # switched on by their environment variables, which CI never sets, so they skip here. GitHub's
       # macOS runners have three cores: two test files at a time, not npm test's eight, keeps the
       # suite's timing-sensitive cancel and teardown tests within their waits.
+      # A watchdog lists the test files still running at 50 minutes, before the job's limit cancels it
+      # and its log is lost (relay 1.3.0's first Node 24 run, 2026-11-21, left no trace of what hung).
       - name: Test
-        run: node --test --test-timeout=600000 --test-concurrency=2 test/*.test.ts
+        run: |
+          ( trap 'kill "$nap" 2>/dev/null; exit 0' TERM; sleep 3000 & nap=$!; wait "$nap"
+            echo "::warning::tests still running after 50 minutes"; pids=$(pgrep -d, -f 'test/|canary|sandbox-exec') && ps -o pid,ppid,etime,command -p "$pids" ) &
+          watchdog=$!
+          status=0
+          node --test --test-timeout=600000 --test-concurrency=2 test/*.test.ts || status=$?
+          kill "$watchdog" 2>/dev/null || true
+          exit "$status"

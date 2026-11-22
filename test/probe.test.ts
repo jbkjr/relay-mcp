@@ -344,6 +344,13 @@ test("probes: only positive evidence of denial passes; timeouts, other failures,
         return true;
       });
     }
+    // An escape outranks an earlier inconclusive probe: the refusal names what got out, not what stalled.
+    await assert.rejects(launchProbed(overriding({ "write-outside": "timeout", "tcp-loopback": "allowed" }), policy, s.harness, []), (err: ConfinementRefused) => {
+      assert.equal(err.check, "tcp-loopback", err.message);
+      assert.match(err.message, /boundary probe tcp-loopback escaped/);
+      assert.equal(err.report!.results.find((r) => r.name === "write-outside")!.got, "timeout", "the stalled probe stays in the report");
+      return true;
+    });
     // Discovery that fails (the worktree's parent cannot be listed) refuses; it is not taken for absence.
     const beside = path.dirname(s.wt);
     fs.chmodSync(beside, 0o300);
@@ -356,6 +363,25 @@ test("probes: only positive evidence of denial passes; timeouts, other failures,
   } finally {
     s.done();
   }
+});
+
+test("canary: a step still running at the canary's deadline is reported as a timeout, and the steps that settled are still reported", () => {
+  // A stalled step (here a command with a long limit of its own) used to hold the whole run until
+  // relay's 30 s limit, which refused the launch as "canary" with no results: an escape elsewhere
+  // went unnamed (GitHub's macOS runners, 2026-11-21).
+  const canary = path.resolve(import.meta.dirname, "..", "dist", "confine", "canary.js");
+  const plan = {
+    stalled: { kind: "exec", command: "/bin/sleep", args: ["5"], timeoutMs: 60_000 },
+    settled: { kind: "exists", path: os.tmpdir() },
+  };
+  const started = Date.now();
+  const r = spawnSync(process.execPath, [canary, JSON.stringify(plan), "500"], { encoding: "utf8", timeout: 15_000 });
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(Date.now() - started < 4000, `the deadline ends the run (${Date.now() - started} ms)`);
+  assert.deepEqual(JSON.parse(r.stdout), { stalled: "timeout", settled: "allowed" });
+  // Without a deadline, as before, the run waits for every step.
+  const quick = { settled: plan.settled };
+  assert.deepEqual(JSON.parse(spawnSync(process.execPath, [canary, JSON.stringify(quick)], { encoding: "utf8", timeout: 15_000 }).stdout), { settled: "allowed" });
 });
 
 const by_ = (r: { results: { name: string; target?: string }[] }) => Object.fromEntries(r.results.map((x) => [x.name, x]));
